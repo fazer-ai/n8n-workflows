@@ -44,7 +44,7 @@
     },
     {
       "parameters": {
-        "jsCode": "/**\n * Monta payload PATCH para /quote-life/accept.\n *\n * Lê consent_id, original_quote_request, idempotency_key e payment_transaction_id\n * diretamente dos custom_attributes da tarefa (persistidos pelos WFs 02 e 09).\n * O agente só precisa informar qual plano foi escolhido e o método de pagamento.\n */\nconst input = $('Gatilho').first().json;\nconst tarefa = $('Carregar tarefa').first().json;\nconst attrs = tarefa.custom_attributes ?? {};\n\nconst consentId = attrs.consent_id_cotacao;\nconst idempotencyKey = attrs.idempotency_key;\nconst paymentTransactionId = attrs.payment_transaction_id;\nlet originalQuoteRequest = attrs.original_quote_request;\n\nif (!consentId) throw new Error('consent_id_cotacao ausente na tarefa. Rode a cotação antes de emitir.');\nif (!originalQuoteRequest) throw new Error('original_quote_request ausente na tarefa. Rode a cotação antes de emitir.');\nif (!paymentTransactionId) throw new Error('payment_transaction_id ausente na tarefa. Gere o pagamento antes de emitir.');\nif (!input.plan_id && !input.operadora_codigo) {\n  throw new Error('Informe plan_id ou operadora_codigo para selecionar o plano.');\n}\n\nif (typeof originalQuoteRequest === 'string') {\n  try { originalQuoteRequest = JSON.parse(originalQuoteRequest); }\n  catch { throw new Error('original_quote_request na tarefa não é JSON válido.'); }\n}\n\nconst selectedPlan = input.plan_id\n  ? { planId: input.plan_id }\n  : { operadora: { codigo: input.operadora_codigo } };\n\nconst payload = {\n  data: {\n    consentId,\n    originalQuoteRequest,\n    selectedPlan,\n    paymentConfirmation: {\n      transactionId: paymentTransactionId,\n      method: input.payment_method ?? 'pix'\n    },\n    acceptance: true\n  }\n};\n\nreturn [{ json: { payload, idempotencyKey } }];\n"
+        "jsCode": "/**\n * Monta payload PATCH para /quote-{ramo}/accept.\n *\n * Lê consent_id_cotacao, original_quote_request, idempotency_key,\n * payment_transaction_id e ramo diretamente dos custom_attributes da\n * tarefa (persistidos pelos WFs 02.* e 09). O agente só informa qual\n * plano foi escolhido e o método de pagamento.\n *\n * O `ramo` decide o path do endpoint de emissão: 'vida' -> /quote-life/accept,\n * 'auto' -> /quote-auto/accept. Ele é emitido como `acceptPath` para o node\n * HTTP Request referenciar (URL dinâmica). Não dá pra hardcodar um path aqui:\n * o mock normaliza o originalQuoteRequest com schema diferente por ramo e\n * rejeita com 422 \"hash mismatch\" se o payload de auto bater no endpoint de vida.\n */\nconst input = $('Gatilho').first().json;\nconst tarefa = $('Carregar tarefa').first().json;\nconst attrs = tarefa.custom_attributes ?? {};\n\nconst consentId = attrs.consent_id_cotacao;\nconst idempotencyKey = attrs.idempotency_key;\nconst paymentTransactionId = attrs.payment_transaction_id;\nconst ramo = String(attrs.ramo ?? '').toLowerCase();\nlet originalQuoteRequest = attrs.original_quote_request;\n\nif (!consentId) throw new Error('consent_id_cotacao ausente na tarefa. Rode a cotação antes de emitir.');\nif (!originalQuoteRequest) throw new Error('original_quote_request ausente na tarefa. Rode a cotação antes de emitir.');\nif (!paymentTransactionId) throw new Error('payment_transaction_id ausente na tarefa. Gere o pagamento antes de emitir.');\nif (!input.plan_id && !input.operadora_codigo) {\n  throw new Error('Informe plan_id ou operadora_codigo para selecionar o plano.');\n}\nif (!['vida', 'auto'].includes(ramo)) {\n  throw new Error(`ramo inválido ou ausente na tarefa (recebido: ${JSON.stringify(attrs.ramo)}). Rode a cotação (02.1 vida ou 02.2 auto) antes de emitir.`);\n}\n\nif (typeof originalQuoteRequest === 'string') {\n  try { originalQuoteRequest = JSON.parse(originalQuoteRequest); }\n  catch { throw new Error('original_quote_request na tarefa não é JSON válido.'); }\n}\n\nconst selectedPlan = input.plan_id\n  ? { planId: input.plan_id }\n  : { operadora: { codigo: input.operadora_codigo } };\n\nconst acceptPath = ramo === 'auto' ? 'quote-auto/accept' : 'quote-life/accept';\n\nconst payload = {\n  data: {\n    consentId,\n    originalQuoteRequest,\n    selectedPlan,\n    paymentConfirmation: {\n      transactionId: paymentTransactionId,\n      method: input.payment_method ?? 'pix'\n    },\n    acceptance: true\n  }\n};\n\nreturn [{ json: { payload, idempotencyKey, acceptPath, ramo } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -58,7 +58,7 @@
     {
       "parameters": {
         "method": "PATCH",
-        "url": "<SUA URL N8N>/webhook/quote-life/accept",
+        "url": "=<SUA URL N8N>/webhook/{{ $json.acceptPath }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -426,5 +426,6 @@
     "callerPolicy": "workflowsFromSameOwner"
   },
   "pinData": {},
+  "meta": null,
   "active": false
 }

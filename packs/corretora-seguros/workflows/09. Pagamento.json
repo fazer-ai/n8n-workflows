@@ -61,7 +61,37 @@
     },
     {
       "parameters": {
-        "content": "## 09. Pagamento (mock)\n\nSimula a criação de uma cobrança PIX ou boleto. Em produção, usar sua API de pagamentos preferida.\n\nRetorna:\n- `transactionId` (vai para o WF 05 Emitir)\n- `instrucao_cliente` (texto pronto para enviar no WhatsApp)\n- `link_pagamento`, `qr_code`, `boleto_linha`\n\n`transactionId` é determinístico por (task_id, metodo, valor) para facilitar testes.",
+        "resource": "kanbanTask",
+        "operation": "get",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Gatilho').first().json.account_id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $('Gatilho').first().json.board_id }}",
+          "mode": "id"
+        },
+        "kanbanTaskId": {
+          "__rl": true,
+          "value": "={{ $('Gatilho').first().json.task_id }}",
+          "mode": "id"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        736,
+        128
+      ],
+      "id": "c2d3e4f5-1111-2222-3333-444455556677",
+      "name": "Carregar tarefa",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "content": "## 09. Pagamento (mock)\n\nGera cobrança PIX ou boleto simulada, move a tarefa pra etapa **Aprovada** e salva `payment_transaction_id` nos atributos pra o WF 05 usar na emissão.\n\nEm produção, substituir o node `Gerar cobrança (mock)` pelo seu gateway (Asaas/Pagar.me/Stripe) e ajustar o mapping de `transactionId`, `instrucao_cliente`, `link_pagamento` etc. O gateway real deve mover a etapa SÓ quando o pagamento confirmar de verdade (via webhook).\n\n`transactionId` mock é determinístico por (task_id, metodo, valor).",
         "height": 320,
         "width": 550,
         "color": 5
@@ -95,13 +125,19 @@
           "mode": "id"
         },
         "specifyCustomAttributesUpdate": "json",
-        "updateFields": {},
-        "customAttributesJsonUpdate": "={{ JSON.stringify({ ...($('Carregar tarefa').first().json.custom_attributes || {}), payment_transaction_id: $('Gerar cobrança (mock)').first().json.transactionId }) }}"
+        "updateFields": {
+          "board_step_id": {
+            "__rl": true,
+            "value": "={{ $('Carregar tarefa').first().json.board.steps.find(s => s.name === 'Aprovada').id }}",
+            "mode": "id"
+          }
+        },
+        "customAttributesJsonUpdate": "={{ JSON.stringify({ ...($('Carregar tarefa').first().json.custom_attributes || {}), payment_transaction_id: $('Gerar cobrança (mock)').first().json.transactionId, payment_metodo: $('Gerar cobrança (mock)').first().json.metodo, payment_status: $('Gerar cobrança (mock)').first().json.status, payment_paid_at: $('Gerar cobrança (mock)').first().json.paidAt }) }}"
       },
       "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
       "typeVersion": 1,
       "position": [
-        928,
+        1024,
         128
       ],
       "id": "b1c2d3e4-5555-6666-7777-888899990000",
@@ -180,7 +216,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1120,
+        1216,
         128
       ],
       "id": "c1d2e3f4-aaaa-bbbb-cccc-dddddddddddd",
@@ -233,36 +269,6 @@
       ],
       "id": "0e561a50-2656-474a-b116-49ee58f882e6",
       "name": "Sticky Note36"
-    },
-    {
-      "parameters": {
-        "resource": "kanbanTask",
-        "operation": "get",
-        "accountId": {
-          "__rl": true,
-          "value": "={{ $('Gatilho').first().json.account_id }}",
-          "mode": "id"
-        },
-        "kanbanTaskId": {
-          "__rl": true,
-          "value": "={{ $('Gatilho').first().json.task_id }}",
-          "mode": "id"
-        },
-        "kanbanBoardId": {
-          "__rl": true,
-          "value": "={{ $('Gatilho').first().json.board_id }}",
-          "mode": "id"
-        }
-      },
-      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
-      "typeVersion": 1,
-      "position": [
-        736,
-        128
-      ],
-      "id": "a9b1c2d3-2222-3333-4444-555566667777",
-      "name": "Carregar tarefa",
-      "credentials": {}
     }
   ],
   "connections": {
@@ -316,5 +322,6 @@
     "callerPolicy": "workflowsFromSameOwner"
   },
   "pinData": {},
+  "meta": null,
   "active": false
 }

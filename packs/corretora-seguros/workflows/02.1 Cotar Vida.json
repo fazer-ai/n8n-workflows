@@ -433,8 +433,10 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
   },
   "pinData": {},
+  "meta": null,
   "active": false
 }
