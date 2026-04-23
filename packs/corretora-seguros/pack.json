@@ -34,6 +34,8 @@
     "@fazer-ai/n8n-nodes-chatwoot.chatwootTrigger": "fazerAiChatwootApi",
     "@elevenlabs/n8n-nodes-elevenlabs.elevenLabs": "elevenLabsApi",
     "@n8n/n8n-nodes-langchain.lmChatOpenAi": "openAiApi",
+    "@n8n/n8n-nodes-langchain.openAi": "openAiApi",
+    "@n8n/n8n-nodes-langchain.memoryPostgresChat": "postgres",
     "n8n-nodes-base.openAi": "openAiApi",
     "n8n-nodes-base.postgres": "postgres"
   },

@@ -123,13 +123,13 @@
               "id": "a1b2c3d4-alrt-conv-0000-111122223333",
               "name": "alerta_conversation_id",
               "value": null,
-              "type": "object"
+              "type": "number"
             },
             {
               "id": "e5f6a7b8-alrt-ibx-0000-444455556666",
               "name": "alerta_inbox_id",
               "value": null,
-              "type": "object"
+              "type": "number"
             }
           ]
         },
