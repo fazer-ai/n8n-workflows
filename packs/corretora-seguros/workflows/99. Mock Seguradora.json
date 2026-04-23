@@ -20,7 +20,7 @@
     {
       "parameters": {
         "content": "### Cotação\n\nNormaliza o payload (envelope `data`, CPF numérico, beneficiários ordenados). Calcula hash 128 bits com cyrb128 → vira consentId e seed do PRNG. Gera 3 cotações (Bradesco, Icatu, MAG) com preços determinísticos baseados em idade, sexo, fumo e coberturas.",
-        "height": 240,
+        "height": 128,
         "width": 520,
         "color": 7
       },
@@ -47,7 +47,8 @@
         112
       ],
       "id": "d5f3f4dd-cb06-43c0-8375-8a121f5d3215",
-      "name": "POST /quote-life/request"
+      "name": "POST /quote-life/request",
+      "webhookId": "quote-life-request-v1"
     },
     {
       "parameters": {
@@ -107,7 +108,6 @@
     {
       "parameters": {
         "content": "### Emissão\n\nValida stateless: recomputa o hash do `originalQuoteRequest` recebido e compara com o `consentId`. Se bate, emite apólice determinística com número `LV-<OP>-<hash>` e vigência de 12 meses. Se não bate ou faltam campos obrigatórios, devolve ResponseError 4xx.",
-        "height": 400,
         "width": 520,
         "color": 3
       },
@@ -115,7 +115,7 @@
       "typeVersion": 1,
       "position": [
         1360,
-        272
+        160
       ],
       "id": "c1e10676-df84-41d2-b311-af85aff755db",
       "name": "Sticky Emissão"
@@ -134,7 +134,8 @@
         448
       ],
       "id": "5a0ca20a-c2c9-4a24-a87b-5fd41bdf4ed4",
-      "name": "PATCH /quote-life/accept"
+      "name": "PATCH /quote-life/accept",
+      "webhookId": "quote-life-accept-v1"
     },
     {
       "parameters": {
@@ -272,7 +273,7 @@
     {
       "parameters": {
         "content": "### Exemplo de payload — cotação\n\n```json\n{\n  \"data\": {\n    \"contratante\": { \"cep\": \"01310100\" },\n    \"segurado\": {\n      \"cpf\": \"12345678901\",\n      \"dataNascimento\": \"1988-03-15\",\n      \"sexo\": \"m\",\n      \"fumante\": false,\n      \"profissao\": \"analista\"\n    },\n    \"beneficiarios\": [\n      { \"nome\": \"Ana Silva\", \"parentesco\": \"conjuge\", \"percentual\": 50 },\n      { \"nome\": \"João Silva\", \"parentesco\": \"filho\", \"percentual\": 25 },\n      { \"nome\": \"Maria Silva\", \"parentesco\": \"filha\", \"percentual\": 25 }\n    ],\n    \"cobertura\": {\n      \"capitalMorte\": 500000,\n      \"capitalInvalidezAcidente\": 500000,\n      \"capitalDoencasGraves\": 100000,\n      \"auxilioFuneral\": 10000,\n      \"prazo\": \"anualRenovavel\"\n    }\n  }\n}\n```",
-        "height": 200,
+        "height": 488,
         "width": 520,
         "color": 5
       },
@@ -280,7 +281,7 @@
       "typeVersion": 1,
       "position": [
         1360,
-        688
+        336
       ],
       "id": "502318bc-14a0-46a3-b7f7-445535324fa2",
       "name": "Sticky Exemplos"
@@ -336,7 +337,6 @@
     {
       "parameters": {
         "content": "### Cotação (Auto)\n\nNormaliza o payload (envelope `data`, placa uppercase, CPF digits-only, CEP digits-only). Calcula hash 128 bits com cyrb128 → vira consentId e seed do PRNG. Gera 3 cotações (Porto, Bradesco, SulAmérica) com preços determinísticos baseados em idade/CNH/sexo do condutor, ano do veículo, CEP e cobertura escolhida.",
-        "height": 240,
         "width": 520,
         "color": 7
       },
@@ -344,7 +344,7 @@
       "typeVersion": 1,
       "position": [
         1360,
-        716
+        832
       ],
       "id": "e6bea0df-7937-4dfd-adf9-2a0083aefc30",
       "name": "Sticky Cotação (Auto)"
@@ -352,7 +352,7 @@
     {
       "parameters": {
         "content": "### Emissão (Auto)\n\nRecebe `originalQuoteRequest` + `planoEscolhido` e recomputa o hash. Se bate, emite a apólice. Caso contrário, retorna 422 VALIDATION.",
-        "height": 240,
+        "height": 112,
         "width": 520,
         "color": 7
       },
@@ -360,7 +360,7 @@
       "typeVersion": 1,
       "position": [
         1360,
-        972
+        1008
       ],
       "id": "a4c69d45-6370-46b9-837e-c0a3215a5e93",
       "name": "Sticky Emissão (Auto)"
@@ -376,10 +376,11 @@
       "typeVersion": 2,
       "position": [
         368,
-        812
+        816
       ],
       "id": "20dd2cdd-b51b-4594-9bd7-6dcd436cd38d",
-      "name": "POST /quote-auto/request"
+      "name": "POST /quote-auto/request",
+      "webhookId": "28de68f2-2146-407e-b9aa-18f6f8aa6024"
     },
     {
       "parameters": {
@@ -389,7 +390,7 @@
       "typeVersion": 2,
       "position": [
         560,
-        812
+        816
       ],
       "id": "91a017f1-b121-42bd-825f-6d78adfca4ca",
       "name": "Normalizar e Hash (Cotar Auto)"
@@ -402,7 +403,7 @@
       "typeVersion": 2,
       "position": [
         752,
-        812
+        816
       ],
       "id": "7d9379de-4c2a-407e-bc68-774a7d5bb988",
       "name": "Gerar Cotação (Auto)"
@@ -431,7 +432,7 @@
       "typeVersion": 1.1,
       "position": [
         944,
-        812
+        816
       ],
       "id": "e33e3622-c2d5-40ae-83bd-1047f5ac5888",
       "name": "Responder Cotação 201 (Auto)"
@@ -447,10 +448,11 @@
       "typeVersion": 2,
       "position": [
         256,
-        1148
+        1152
       ],
       "id": "bf19cdb6-47d3-4c1d-9281-17318462ad2e",
-      "name": "PATCH /quote-auto/accept"
+      "name": "PATCH /quote-auto/accept",
+      "webhookId": "5a3566fd-2dcb-45d8-89c8-9e42801600d2"
     },
     {
       "parameters": {
@@ -460,7 +462,7 @@
       "typeVersion": 2,
       "position": [
         448,
-        1148
+        1152
       ],
       "id": "e7187cf8-5a07-4e5a-b121-25e0722644de",
       "name": "Validar consentId e Hash (Auto)"
@@ -504,7 +506,7 @@
       "typeVersion": 2.2,
       "position": [
         640,
-        1148
+        1152
       ],
       "id": "02d77180-1837-4f14-9a6b-1fe659d30d08",
       "name": "Validação passou? (Auto)"
@@ -517,7 +519,7 @@
       "typeVersion": 2,
       "position": [
         864,
-        1052
+        1056
       ],
       "id": "1eb9c474-68f0-46b0-8edb-900ca7a554b8",
       "name": "Emitir Apólice (Auto)"
@@ -542,7 +544,7 @@
       "typeVersion": 1.1,
       "position": [
         1088,
-        1052
+        1056
       ],
       "id": "486b2415-6f9e-493b-b4eb-b2b8b11e7351",
       "name": "Responder Emissão 201 (Auto)"
@@ -555,7 +557,7 @@
       "typeVersion": 2,
       "position": [
         864,
-        1244
+        1248
       ],
       "id": "ddc262b8-6350-463c-a7b5-e544eaa26eba",
       "name": "Montar ResponseError (Auto)"
@@ -580,7 +582,7 @@
       "typeVersion": 1.1,
       "position": [
         1088,
-        1244
+        1248
       ],
       "id": "4dc60094-ead9-405f-b50c-5ff8a11e061f",
       "name": "Responder Erro 4xx (Auto)"
@@ -783,5 +785,6 @@
     "callerPolicy": "workflowsFromSameOwner"
   },
   "pinData": {},
+  "meta": null,
   "active": false
 }

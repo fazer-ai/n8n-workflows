@@ -97,6 +97,108 @@
     },
     {
       "parameters": {
+        "url": "=<SUA URL CHATWOOT>/api/v1/accounts/{{ $json.account_id }}/conversations/{{ $json.conversation_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "fazerAiChatwootApi",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        112
+      ],
+      "id": "c1d2e3f4-a5b6-4c7d-8e9f-0a1b2c3d4e5f",
+      "name": "Resolver conversation_id interno",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "11111111-2222-3333-4444-555555555555",
+              "name": "conversation_id_internal",
+              "value": "={{ $json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "22222222-3333-4444-5555-666666666666",
+              "name": "account_id",
+              "value": "={{ $('Localizar board Sinistros').item.json.account_id }}",
+              "type": "number"
+            },
+            {
+              "id": "33333333-4444-5555-6666-777777777777",
+              "name": "conversation_id",
+              "value": "={{ $('Localizar board Sinistros').item.json.conversation_id }}",
+              "type": "number"
+            },
+            {
+              "id": "44444444-5555-6666-7777-888888888888",
+              "name": "inbox_id",
+              "value": "={{ $('Localizar board Sinistros').item.json.inbox_id }}",
+              "type": "number"
+            },
+            {
+              "id": "55555555-6666-7777-8888-999999999999",
+              "name": "contact_id",
+              "value": "={{ $('Localizar board Sinistros').item.json.contact_id }}",
+              "type": "number"
+            },
+            {
+              "id": "66666666-7777-8888-9999-aaaaaaaaaaaa",
+              "name": "tipo_sinistro",
+              "value": "={{ $('Localizar board Sinistros').item.json.tipo_sinistro }}",
+              "type": "string"
+            },
+            {
+              "id": "77777777-8888-9999-aaaa-bbbbbbbbbbbb",
+              "name": "numero_sinistro",
+              "value": "={{ $('Localizar board Sinistros').item.json.numero_sinistro }}",
+              "type": "string"
+            },
+            {
+              "id": "88888888-9999-aaaa-bbbb-cccccccccccc",
+              "name": "titulo_tarefa",
+              "value": "={{ $('Localizar board Sinistros').item.json.titulo_tarefa }}",
+              "type": "string"
+            },
+            {
+              "id": "99999999-aaaa-bbbb-cccc-dddddddddddd",
+              "name": "descricao_tarefa",
+              "value": "={{ $('Localizar board Sinistros').item.json.descricao_tarefa }}",
+              "type": "string"
+            },
+            {
+              "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+              "name": "board_id",
+              "value": "={{ $('Localizar board Sinistros').item.json.board_id }}",
+              "type": "number"
+            },
+            {
+              "id": "bbbbbbbb-cccc-dddd-eeee-ffffffffffff",
+              "name": "step_id",
+              "value": "={{ $('Localizar board Sinistros').item.json.step_id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1024,
+        112
+      ],
+      "id": "d2e3f4a5-b6c7-4d8e-9f0a-1b2c3d4e5f6a",
+      "name": "Mesclar id interno"
+    },
+    {
+      "parameters": {
         "resource": "kanbanTask",
         "accountId": {
           "__rl": true,
@@ -130,13 +232,14 @@
         "additionalFields": {
           "description": "={{ $json.descricao_tarefa }}",
           "priority": "urgent",
-          "conversation_ids": "={{ [$json.conversation_id] }}"
+          "contact_ids": "={{ [$json.contact_id] }}",
+          "conversation_ids": "={{ [$json.conversation_id_internal] }}"
         }
       },
       "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
       "typeVersion": 1,
       "position": [
-        976,
+        1216,
         112
       ],
       "id": "f24b385a-7a61-40bf-8243-003fe92961a8",
@@ -173,7 +276,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        1168,
+        1408,
         112
       ],
       "id": "62d281cd-99c1-41e7-9f23-6baf63b325a7",
@@ -220,7 +323,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1360,
+        1600,
         112
       ],
       "id": "bf829d69-392b-432f-ad2c-384e6450cd94",
@@ -345,7 +448,7 @@
       "main": [
         [
           {
-            "node": "Criar tarefa Sinistro",
+            "node": "Resolver conversation_id interno",
             "type": "main",
             "index": 0
           }
@@ -373,6 +476,28 @@
           }
         ]
       ]
+    },
+    "Resolver conversation_id interno": {
+      "main": [
+        [
+          {
+            "node": "Mesclar id interno",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mesclar id interno": {
+      "main": [
+        [
+          {
+            "node": "Criar tarefa Sinistro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -380,5 +505,6 @@
     "callerPolicy": "workflowsFromSameOwner"
   },
   "pinData": {},
+  "meta": null,
   "active": false
 }
