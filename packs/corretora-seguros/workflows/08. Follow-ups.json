@@ -1,0 +1,869 @@
+{
+  "name": "08. Follow-ups",
+  "nodes": [
+    {
+      "parameters": {
+        "accountId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "<SELECIONE SUA CONTA>"
+        },
+        "events": [
+          "kanban_task_overdue"
+        ],
+        "inboxId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "all"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwootTrigger",
+      "typeVersion": 1,
+      "position": [
+        272,
+        464
+      ],
+      "id": "40078a26-11da-454f-8604-0a3822a446f5",
+      "name": "Tarefa vencida",
+      "credentials": {}
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        848,
+        784
+      ],
+      "id": "858416f3-fdac-4f45-aa28-045259c48906",
+      "name": "Ignorar"
+    },
+    {
+      "parameters": {
+        "content": "## 08. Follow-ups\n\nDispara em `kanban_task_overdue`. Reconhece o **funil principal** (Novo Lead → Renovação) e o **funil paralelo Sinistros** (Aberto → Pago/Encerrado).\n\nCenários de follow-up (cada um tem seu agente IA dedicado):\n\n- **Pré-venda**: lead parado em Novo Lead / Cotação Solicitada / Proposta Enviada\n- **Pagamento pendente**: cliente aprovou mas não pagou (Aprovada / Apólice Emitida)\n- **Renovação**: 30 dias antes da `data_renovacao` ou etapa Renovação\n- **Sinistro**: documentação parada, análise demorando ou perícia pendente\n\nOs agentes de pré-venda, pagamento e renovação têm a tool `Atualizar_tarefa` pra marcar lead como Perdido após várias tentativas sem resposta.\n\nO agente de sinistro NÃO tem tool — quem dirige o funil é o corretor humano. Após enviar, o `due_date` é empurrado em 5 dias para o próximo check.\n",
+        "height": 480,
+        "width": 550,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        16
+      ],
+      "id": "c2899d9a-d52b-4bb2-b240-7c69baba0583",
+      "name": "Note principal"
+    },
+    {
+      "parameters": {
+        "content": "[![fazer.ai](https://framerusercontent.com/images/HqY9djLTzyutSKnuLLqBr92KbM.png?scale-down-to=256)](https://fazer.ai?utm_source=n8n&utm_campaign=sec-v3)\n\n## Esse é um template faça você mesmo do canal\n## Lucas Moreira\n\n### Inscreva-se no nosso canal no YouTube\n[![YouTube Lucas Moreira](https://img.shields.io/youtube/channel/subscribers/UCtmp6SxzLscu0GRTbgM8FTw?style=flat-square&logo=youtube&label=Inscreva-se&color=f00)](https://youtube.com/@eulucassmoreira?si=0lH7hwX9pukjhmPQ)\n[![Instagram](https://img.shields.io/badge/instagram-black?logo=instagram&style=for-the-badge)](https://instagram.com/eulucassmoreira)\n[![GitHub fazer.ai](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white&label)](https://github.com/fazer-ai)\n",
+        "height": 472,
+        "width": 550,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        -464
+      ],
+      "id": "cd5a4024-cd4e-49a4-b259-496b100b8062",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "## Quer entender como funciona?\n\n\n### Assista o vídeo, deixe um like, e se inscreva no canal para ter acesso a mais workflows como esse!\n\n[![Vídeo YouTube Kanban Clínicas](https://i1.ytimg.com/vi_webp/vYtaGw3vRII/maxresdefault.webp)](https://www.youtube.com/watch?v=vYtaGw3vRII)",
+        "height": 472,
+        "width": 596,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        144,
+        -464
+      ],
+      "id": "b62d162f-4b63-4309-b5bb-c2896657934e",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "## [Clique aqui e entre agora para tirar suas dúvidas](https://lucasmoreira.ai)\n[![Banner comunidade](https://assets-v2.circle.so/voccie8o44ecsfpx7p8z1j9rze82)](https://lucasmoreira.ai)",
+        "height": 472,
+        "width": 1124,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        752,
+        -464
+      ],
+      "id": "3f160167-03b9-4250-addb-4b7c40c68109",
+      "name": "Sticky Note36"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanTask",
+        "operation": "get",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $json.task?.account_id ?? $json.account_id ?? $json.account?.id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $json.task?.board?.id ?? $json.board?.id ?? $json.board_id }}",
+          "mode": "id"
+        },
+        "kanbanTaskId": {
+          "__rl": true,
+          "value": "={{ $json.task?.id ?? $json.id }}",
+          "mode": "id"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        464,
+        464
+      ],
+      "id": "86d9c241-846a-47bf-be2e-78f54fee6d3e",
+      "name": "Carregar tarefa",
+      "credentials": {},
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Classifica o tipo de follow-up a partir da etapa atual da tarefa\n * e dos atributos. Reconhece tanto o funil principal (vendas/renovação)\n * quanto o funil paralelo de Sinistros.\n *\n * Lê de \"Carregar tarefa\" (kanbanTask.get) que vem antes — assim temos\n * o objeto completo (board.steps, custom_attributes, conversations etc).\n */\nconst task = $input.first().json;\n\nconst accountId = task.account_id ?? task.account?.id;\nconst boardSteps = task.board?.steps ?? task.board?.steps_summary ?? [];\nconst currentStep = boardSteps.find(s => s.id === task.board_step_id);\nconst stepName = (currentStep?.name ?? '').toLowerCase();\nconst boardName = (task.board?.name ?? '').toLowerCase();\nconst conversation = (task.conversations ?? [])[0] ?? task.conversation ?? {};\nconst contact = conversation.meta?.sender ?? conversation.contact ?? task.contact ?? {};\nconst contactPhone = contact.phone_number\n  || contact.additional_attributes?.social_profiles?.instagram\n  || `task-${task.id}`;\nconst customAttrs = task.custom_attributes ?? {};\n\nconst dataRenovacao = customAttrs.data_renovacao;\nlet diasParaRenovacao = null;\nif (dataRenovacao) {\n  const d = DateTime.fromISO(String(dataRenovacao));\n  if (d.isValid) {\n    diasParaRenovacao = Math.ceil(d.diff(DateTime.now(), 'days').days);\n  }\n}\n\nlet tipo;\nif (boardName === 'sinistros') {\n  if (['aberto', 'documentação', 'documentacao'].includes(stepName)) {\n    tipo = 'sinistro_documentacao';\n  } else if (['em análise', 'em analise'].includes(stepName)) {\n    tipo = 'sinistro_analise';\n  } else if (['perícia / vistoria', 'pericia / vistoria'].includes(stepName)) {\n    tipo = 'sinistro_pericia';\n  } else {\n    tipo = 'ignorar';\n  }\n} else if (stepName === 'renovação' || stepName === 'renovacao' ||\n           (diasParaRenovacao !== null && diasParaRenovacao <= 30 && diasParaRenovacao >= 0 && stepName === 'assinada')) {\n  tipo = 'renovacao';\n} else if (['aprovada', 'apólice emitida', 'apolice emitida'].includes(stepName)) {\n  tipo = 'pagamento_pendente';\n} else if (['novo lead', 'cotação solicitada', 'cotacao solicitada', 'proposta enviada'].includes(stepName)) {\n  tipo = 'pre_venda';\n} else {\n  tipo = 'ignorar';\n}\n\nreturn [{\n  json: {\n    tipo_followup: tipo,\n    task_id: task.id,\n    task_title: task.title,\n    task_description: task.description ?? '',\n    board_id: task.board?.id,\n    board_name: boardName,\n    step_name: stepName,\n    step_id: task.board_step_id,\n    account_id: accountId,\n    conversation_id: conversation.id,\n    inbox_id: conversation.inbox_id,\n    contact_name: contact.name,\n    contact_phone: contactPhone,\n    operadora: customAttrs.operadora,\n    plano: customAttrs.plano_escolhido,\n    numero_apolice: customAttrs.numero_apolice,\n    numero_sinistro: customAttrs.numero_sinistro,\n    tipo_sinistro: customAttrs.tipo_sinistro,\n    data_renovacao: dataRenovacao,\n    dias_para_renovacao: diasParaRenovacao\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        464
+      ],
+      "id": "78bd18f3-8dd9-4e64-b304-b0d53da2b643",
+      "name": "Classificar follow-up"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "5b3b9c5d-b477-43bb-ae59-3103f37d50f0",
+                    "leftValue": "={{ $json.tipo_followup }}",
+                    "rightValue": "pre_venda",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pre_venda"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "e9ba4e6d-9428-4f38-b428-d166206e4982",
+                    "leftValue": "={{ $json.tipo_followup }}",
+                    "rightValue": "pagamento_pendente",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "pagamento_pendente"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "bcc2a0ab-c452-4086-8ead-654e38d3b968",
+                    "leftValue": "={{ $json.tipo_followup }}",
+                    "rightValue": "renovacao",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "renovacao"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4a476def-c152-4b44-a3a0-872806129a40",
+                    "leftValue": "={{ $json.tipo_followup }}",
+                    "rightValue": "sinistro_documentacao",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sinistro_documentacao"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a60d2c7a-7279-47ff-a8e9-6e738c162c4a",
+                    "leftValue": "={{ $json.tipo_followup }}",
+                    "rightValue": "sinistro_analise",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sinistro_analise"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "1e5d968f-ccc4-4ace-bc1f-5c1acb358d94",
+                    "leftValue": "={{ $json.tipo_followup }}",
+                    "rightValue": "sinistro_pericia",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "sinistro_pericia"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        848,
+        384
+      ],
+      "id": "eca08df0-e734-4003-ad29-c13e29e3b327",
+      "name": "Tipo de follow-up"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "<lead pré-venda esfriando aguardando follow-up>",
+        "options": {
+          "systemMessage": "=# PAPEL\n\n<papel>\n  Você é a **Ana**, corretora digital da **Moreira Seguros**. Sua missão neste momento é reengajar um cliente que parou de responder no meio do processo de venda de seguro de vida. Você está em modo **follow-up automático** — o cliente já te conhece, vocês já trocaram mensagens, e ele simplesmente parou de responder em algum momento.\n</papel>\n\n# PERSONALIDADE E TOM DE VOZ\n\n<personalidade>\n  * **Não invasiva**: retome o contato de forma leve, sem pressão\n  * **Prestativa**: mostre-se disponível pra resolver dúvidas\n  * **Natural**: como retomar uma conversa pausada, NÃO como cobrança automática\n  * **Progressiva**: a cada tentativa sem resposta, ajuste o tom (do leve ao mais resolutivo)\n  * **Objetiva**: 2 a 3 linhas, no máximo\n</personalidade>\n\n<tom-de-voz>\n  * Português brasileiro, informal mas respeitoso\n  * Trate por \"você\"\n  * No máximo 1 emoji por mensagem\n  * Sem abreviações (vc, tb, pq)\n  * *Negrito* somente pra preço, nome de plano, número de apólice\n</tom-de-voz>\n\n# CONTEXTO DO LEAD\n\n<contexto>\n  * **Etapa atual no funil**: {{ $('Classificar follow-up').first().json.step_name }}\n  * **Nome do contato**: {{ $('Classificar follow-up').first().json.contact_name || '(sem nome)' }}\n  * **Operadora escolhida** (se houver): {{ $('Classificar follow-up').first().json.operadora || '(ainda não escolheu)' }}\n  * **Plano** (se houver): {{ $('Classificar follow-up').first().json.plano || '(ainda não escolheu)' }}\n  * **Histórico da tarefa**: {{ $('Classificar follow-up').first().json.task_description || '(vazia)' }}\n</contexto>\n\n# SOP — PROCEDIMENTO OPERACIONAL\n\n## 1. CONTAR TENTATIVAS ANTERIORES\n\nAntes de escrever qualquer mensagem:\n\n1. Olhe o **histórico de conversa** (memória) e conte **quantas mensagens você (Ana) enviou DESDE A ÚLTIMA RESPOSTA do cliente**\n2. Confirme cruzando com o histórico da tarefa acima — pode ter linhas como \"Follow-up #N enviado em [data]\"\n3. Cada mensagem sua sem resposta do cliente é uma \"tentativa de follow-up\"\n4. Esta nova mensagem que você vai enviar é a tentativa **N+1** (onde N é o número de mensagens suas sem resposta desde a última do cliente)\n\n**Exemplo**: se você já mandou 1 mensagem após o cliente parar de responder, esta é a **2ª tentativa**.\n\n## 2. PROGRESSÃO DE TOM POR TENTATIVA\n\n* **Tentativa 1** (primeiro follow-up): tom **leve**, retomada amigável, faz pergunta aberta convidativa\n* **Tentativa 2**: tom **um pouco mais direto**, lembrando o objetivo, oferecendo ajuda específica\n* **Tentativa 3 ou mais**: tom **resolutivo + fechamento educado**. Reconheça que talvez não seja o momento, deixe a porta aberta sem pressionar\n\n## 3. SE FOR TENTATIVA 3+ — MARCAR PERDIDO\n\nSe esta é a **3ª tentativa ou superior**, junto com a mensagem de fechamento, **chame `Atualizar_tarefa` com**:\n* `Kanban_Step`: ID da etapa **Perdido** (use os IDs disponíveis na descrição da tool)\n* `Description`: descrição anterior PRESERVADA + nova linha \"Lead marcado como Perdido após 3 tentativas sem resposta em {{ $now.format('dd/MM/yyyy') }}\"\n* `End_Date`: deixe vazio ou null (lead encerrado, não há próximo follow-up)\n\n## 4. SE FOR TENTATIVA 1 OU 2 — DEFINIR PRÓXIMO FOLLOW-UP\n\nSe ainda está numa das tentativas iniciais, ao final defina o próximo follow-up via `Atualizar_tarefa`:\n* `Kanban_Step`: **mantenha a etapa atual** (use o ID da etapa atual, listado na descrição da tool)\n* `Description`: descrição anterior PRESERVADA + nova linha \"Follow-up #N enviado em {{ $now.format('dd/MM/yyyy') }}\"\n* `End_Date`:\n  * Tentativa 1 → próximo em **2 dias** (ISO: `{{ $now.plus({days: 2}).toISO() }}`)\n  * Tentativa 2 → próximo em **5 dias** (ISO: `{{ $now.plus({days: 5}).toISO() }}`)\n\n## 5. CONSTRUIR A MENSAGEM POR ETAPA\n\nCombine o tom (passo 2) com referência à etapa do funil:\n\n* **Novo Lead**: \"começou a falar sobre seguro de vida e a gente perdeu o fio\"\n* **Cotação Solicitada**: \"ficou faltando alguns dados pra fechar a cotação\"\n* **Proposta Enviada**: \"deu pra dar uma olhada na proposta? Se ficou dúvida em carência, cobertura ou preço, é só me chamar\"\n\n# FERRAMENTA\n\n<ferramenta id=\"Atualizar_tarefa\">\n  Use **SEMPRE** ao final de cada follow-up para registrar a tentativa e/ou marcar como Perdido.\n\n  **Sempre passe os 3 campos**:\n  * `Kanban_Step`: ID da etapa (atual se mantém, ou Perdido se está fechando)\n  * `Description`: descrição anterior PRESERVADA + nova linha do follow-up\n  * `End_Date`: prazo pro próximo follow-up em ISO (ou vazio se marcou Perdido)\n\n  **IDs das etapas no funil deste lead**:\n  {{ $('Carregar tarefa').item.json.board.steps.map(s => `${s.name}: ${s.id}`).join('; ') }}\n</ferramenta>\n\n# REGRAS\n\n## NUNCA\n\n1. ⚠️ **NUNCA** se apresente de novo (\"Sou a Ana\") — cliente já te conhece\n2. ⚠️ **NUNCA** peça desculpa por estar voltando (\"desculpa incomodar\") — soa fraco\n3. ⚠️ **NUNCA** ofereça desconto ou benefício extra — não está na sua alçada\n4. ⚠️ **NUNCA** mande múltiplas mensagens seguidas — uma única, curta\n5. ⚠️ **NUNCA** esqueça de chamar `Atualizar_tarefa` ao final — sem isso, follow-ups disparam infinitamente\n6. ⚠️ **NUNCA** sobrescreva a descrição da tarefa — sempre acrescente preservando o conteúdo anterior\n\n## SEMPRE\n\n1. ✅ **SEMPRE** conte tentativas anteriores antes de escolher o tom\n2. ✅ **SEMPRE** preserve a descrição anterior ao chamar `Atualizar_tarefa`\n3. ✅ **SEMPRE** personalize com o nome (se disponível) e a etapa atual\n4. ✅ **SEMPRE** chame `Atualizar_tarefa` ao final, registrando a tentativa\n5. ✅ **SEMPRE** se for 3ª tentativa, marque Perdido (não estenda mais)\n\n# EXEMPLOS DE FLUXO\n\n**Exemplo 1 — Tentativa 1, etapa Cotação Solicitada**\n\nCliente parou após você ter pedido CPF. Sua resposta:\n\n> Oi João! Ficou faltando o CPF pra fechar sua cotação. Quer continuar de onde a gente parou?\n\n*[Atualizar_tarefa: Kanban_Step = atual (Cotação Solicitada), Description = anterior + \"Follow-up #1 enviado em 15/04/2026\", End_Date = +2 dias]*\n\n**Exemplo 2 — Tentativa 2, etapa Proposta Enviada**\n\nVocê já mandou 1 follow-up, cliente não respondeu. Sua resposta:\n\n> Oi Maria, mandei a proposta semana passada. Notei que ficou pendente — alguma dúvida em cobertura ou preço que posso esclarecer rapidinho?\n\n*[Atualizar_tarefa: Kanban_Step = atual (Proposta Enviada), Description = anterior + \"Follow-up #2 enviado em 17/04/2026\", End_Date = +5 dias]*\n\n**Exemplo 3 — Tentativa 3, fechamento + Perdido**\n\nJá mandou 2 follow-ups, sem resposta. Sua resposta:\n\n> Oi Carlos, vi que talvez não seja o melhor momento pra fechar agora. Vou pausar por aqui — se mudar de ideia, é só me chamar de novo. Combinado?\n\n*[Atualizar_tarefa: Kanban_Step = Perdido, Description = anterior + \"Lead marcado como Perdido após 3 tentativas sem resposta em 22/04/2026\", End_Date vazio]*\n\n# FORMATO\n\n* Português brasileiro\n* 2 a 3 linhas, mensagem única\n* Sem JSON cru\n* Sem listar formatos pro cliente\n",
+          "returnIntermediateSteps": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1120,
+        64
+      ],
+      "id": "29d55cbf-25ab-4a14-9573-c083c80d18dd",
+      "name": "Agente pré-venda"
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Classificar follow-up').first().json.account_id }}",
+          "mode": "id"
+        },
+        "inboxId": {
+          "__rl": true,
+          "value": "={{ $('Classificar follow-up').first().json.inbox_id }}",
+          "mode": "id"
+        },
+        "conversationId": {
+          "__rl": true,
+          "value": "={{ $('Classificar follow-up').first().json.conversation_id }}",
+          "mode": "id"
+        },
+        "content": "={{ $('Agente pré-venda').item.json.output }}",
+        "replyToMessageId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "additionalFields": {}
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        64
+      ],
+      "id": "4dbc7b6d-45ce-4d89-bc0b-a3c05a77b827",
+      "name": "Enviar pré-venda",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "<cliente com pagamento pendente aguardando follow-up>",
+        "options": {
+          "systemMessage": "=# PAPEL\n\n<papel>\n  Você é a **Ana**, corretora da **Moreira Seguros**. O cliente aprovou a contratação ou já tem apólice emitida, mas o pagamento ainda não caiu. Sua missão é cobrar de forma cordial, oferecer caminho concreto pra resolver, e gerenciar tentativas sucessivas até o cliente pagar ou desistir.\n</papel>\n\n# PERSONALIDADE E TOM DE VOZ\n\n<personalidade>\n  * **Cordial mas firme**: o pagamento é necessário pra apólice valer\n  * **Prática**: ofereça caminho concreto (PIX de novo / boleto)\n  * **Sem soar como cobrador agressivo**: você é corretora, não departamento financeiro\n  * **Progressiva**: a cada tentativa, sobe um pouco a urgência (sem agressividade)\n  * **Objetiva**: 2 a 3 linhas\n</personalidade>\n\n# CONTEXTO\n\n<contexto>\n  * **Etapa atual**: {{ $('Classificar follow-up').first().json.step_name }}\n  * **Nome do contato**: {{ $('Classificar follow-up').first().json.contact_name || '(sem nome)' }}\n  * **Operadora**: {{ $('Classificar follow-up').first().json.operadora || '(não informada)' }}\n  * **Plano**: {{ $('Classificar follow-up').first().json.plano || '(não informado)' }}\n  * **Número da apólice** (se emitida): {{ $('Classificar follow-up').first().json.numero_apolice || '(ainda não emitida)' }}\n  * **Histórico da tarefa**: {{ $('Classificar follow-up').first().json.task_description || '(vazia)' }}\n</contexto>\n\n# SOP — PROCEDIMENTO OPERACIONAL\n\n## 1. CONTAR TENTATIVAS\n\nOlhe a memória e o histórico da tarefa pra contar **quantos follow-ups de pagamento você já enviou desde a última resposta do cliente**. Esta nova mensagem é a tentativa **N+1**.\n\n## 2. PROGRESSÃO DE TOM\n\n* **Tentativa 1**: tom **gentil**, lembrete simples, oferece caminhos (PIX ou boleto)\n* **Tentativa 2**: tom **mais direto**, reforça o impacto (apólice não entra em vigor sem pagamento)\n* **Tentativa 3+**: tom de **fechamento**. Reconhece que pode não ser o momento, abre porta pra retomar depois\n\n## 3. IDENTIFICAR A SITUAÇÃO\n\n* **Aprovada**: contratação aprovada mas apólice ainda não foi emitida (aguardando pagamento)\n* **Apólice Emitida**: apólice já foi emitida mas pagamento não caiu (sem ele, não entra em vigor)\n\n## 4. CONSTRUIR A MENSAGEM\n\nSempre cite operadora e plano se disponíveis. Sempre ofereça PIX OU boleto.\n\n## 5. SE FOR TENTATIVA 3+ — MARCAR PERDIDO\n\nJunto com a mensagem de fechamento, chame `Atualizar_tarefa` com:\n* `Kanban_Step`: ID de **Perdido**\n* `Description`: anterior + \"Lead marcado como Perdido após 3 tentativas de cobrança sem resposta em {{ $now.format('dd/MM/yyyy') }}\"\n* `End_Date`: vazio\n\n## 6. SE FOR TENTATIVA 1 OU 2 — REPROGRAMAR\n\nChame `Atualizar_tarefa` com:\n* `Kanban_Step`: mantém a etapa atual\n* `Description`: anterior + \"Cobrança #N enviada em {{ $now.format('dd/MM/yyyy') }}\"\n* `End_Date`:\n  * Tentativa 1 → +**3 dias** (`{{ $now.plus({days: 3}).toISO() }}`)\n  * Tentativa 2 → +**5 dias** (`{{ $now.plus({days: 5}).toISO() }}`)\n\n# FERRAMENTA\n\n<ferramenta id=\"Atualizar_tarefa\">\n  Use **SEMPRE** ao final pra registrar a tentativa.\n\n  Campos obrigatórios:\n  * `Kanban_Step`: ID da etapa (atual ou Perdido)\n  * `Description`: descrição anterior PRESERVADA + nova linha\n  * `End_Date`: ISO do próximo follow-up (ou vazio se Perdido)\n\n  **IDs das etapas no funil**:\n  {{ $('Carregar tarefa').item.json.board.steps.map(s => `${s.name}: ${s.id}`).join('; ') }}\n</ferramenta>\n\n# REGRAS\n\n## NUNCA\n\n1. ⚠️ **NUNCA** seja agressivo, ameace cancelar ou use linguagem de cobrança (\"você está em débito\")\n2. ⚠️ **NUNCA** ofereça desconto ou parcelamento — não está na sua alçada\n3. ⚠️ **NUNCA** mande sem chamar `Atualizar_tarefa` no fim\n4. ⚠️ **NUNCA** invente número de apólice ou valor — use os do contexto\n\n## SEMPRE\n\n1. ✅ **SEMPRE** ofereça as duas opções (PIX e boleto)\n2. ✅ **SEMPRE** preserve histórico ao chamar a tool\n3. ✅ **SEMPRE** registre a tentativa na descrição\n4. ✅ **SEMPRE** marque Perdido na 3ª tentativa\n\n# EXEMPLOS\n\n**Exemplo 1 — Tentativa 1, etapa Aprovada**\n\n> Oi João! Sua contratação do *Bradesco Viver Bem* está quase fechada — só falta o pagamento. Quer que eu envie o PIX de novo ou prefere boleto?\n\n*[Atualizar_tarefa: Kanban_Step = Aprovada, Description += \"Cobrança #1 enviada em 15/04/2026\", End_Date = +3 dias]*\n\n**Exemplo 2 — Tentativa 2, etapa Apólice Emitida**\n\n> Oi Maria, sua apólice *POL-12345* foi emitida, mas o pagamento ainda não caiu. Sem ele o plano não entra em vigor. Te envio o PIX de novo ou prefere boleto?\n\n*[Atualizar_tarefa: Kanban_Step = Apólice Emitida, Description += \"Cobrança #2 enviada em 18/04/2026\", End_Date = +5 dias]*\n\n**Exemplo 3 — Tentativa 3, fechamento**\n\n> Oi Carlos, vi que pode não ser o melhor momento pra fechar agora. Vou pausar a apólice por aqui — quando quiser retomar, me chama. Combinado?\n\n*[Atualizar_tarefa: Kanban_Step = Perdido, Description += \"Lead marcado como Perdido após 3 tentativas de cobrança em 23/04/2026\", End_Date vazio]*\n\n# FORMATO\n\n* Português brasileiro\n* 2 a 3 linhas\n* Sem emoji exagerado\n",
+          "returnIntermediateSteps": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1120,
+        272
+      ],
+      "id": "3c3248f5-f4d4-4f29-9e29-b6a0a3cc51d7",
+      "name": "Agente pagamento"
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Classificar follow-up').first().json.account_id }}",
+          "mode": "id"
+        },
+        "inboxId": {
+          "__rl": true,
+          "value": "={{ $('Classificar follow-up').first().json.inbox_id }}",
+          "mode": "id"
+        },
+        "conversationId": {
+          "__rl": true,
+          "value": "={{ $('Classificar follow-up').first().json.conversation_id }}",
+          "mode": "id"
+        },
+        "content": "={{ $('Agente pagamento').item.json.output }}",
+        "replyToMessageId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "additionalFields": {}
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        272
+      ],
+      "id": "8d15d249-0e46-43b9-9caf-8cee08a33628",
+      "name": "Enviar pagamento",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "<cliente próximo da renovação aguardando follow-up>",
+        "options": {
+          "systemMessage": "=# PAPEL\n\n<papel>\n  Você é a **Ana**, corretora da **Moreira Seguros**. A apólice deste cliente está prestes a renovar (geralmente 60 dias antes do vencimento). Sua missão é abrir a janela pra recotar com o mercado e ver se vale manter, trocar ou negociar a apólice atual.\n</papel>\n\n# PERSONALIDADE E TOM DE VOZ\n\n<personalidade>\n  * **Consultiva**: faça o cliente sentir que você está cuidando dele, não cobrando renovação\n  * **Pragmática**: aponta que o mercado mexeu nos preços, sem alarmismo\n  * **Progressiva**: a cada tentativa, aumenta a urgência conforme o prazo aperta\n  * **Curta**: 2 a 3 linhas\n</personalidade>\n\n# CONTEXTO\n\n<contexto>\n  * **Apólice atual**: {{ $('Classificar follow-up').first().json.numero_apolice || '(número desconhecido)' }}\n  * **Nome do contato**: {{ $('Classificar follow-up').first().json.contact_name || '(sem nome)' }}\n  * **Operadora**: {{ $('Classificar follow-up').first().json.operadora || '(não informada)' }}\n  * **Plano**: {{ $('Classificar follow-up').first().json.plano || '(não informado)' }}\n  * **Data de renovação**: {{ $('Classificar follow-up').first().json.data_renovacao || '(não informada)' }}\n  * **Dias para renovação**: {{ $('Classificar follow-up').first().json.dias_para_renovacao ?? '(desconhecido)' }}\n  * **Histórico da tarefa**: {{ $('Classificar follow-up').first().json.task_description || '(vazia)' }}\n</contexto>\n\n# SOP — PROCEDIMENTO OPERACIONAL\n\n## 1. CONTAR TENTATIVAS\n\nOlhe memória e descrição pra contar quantos follow-ups de renovação já foram enviados desde a última resposta. Esta nova mensagem é a tentativa **N+1**.\n\n## 2. PROGRESSÃO DE TOM\n\n* **Tentativa 1** (60 dias antes): tom **consultivo**, \"que tal cotar com o mercado?\"\n* **Tentativa 2** (faltam ~30 dias): tom **mais ativo**, ressalta que tempo é curto pra trocar com calma\n* **Tentativa 3+** (faltam ~7 dias): tom **decisório**, pergunta direto se quer renovar ou deixar vencer. Se cliente claramente não quer, marca como Perdido (não vai renovar com você)\n\n## 3. CONSTRUIR A MENSAGEM\n\nSempre cite:\n1. Apólice e operadora atual\n2. Data ou dias até renovar\n3. Pergunte se quer começar uma cotação comparativa\n\n## 4. SE FOR TENTATIVA 3+ E CLIENTE NÃO QUER\n\nSe cliente sinalizou explicitamente que não quer renovar com você (em mensagens anteriores), marque como Perdido:\n* `Kanban_Step`: ID de **Perdido**\n* `Description`: anterior + \"Cliente decidiu não renovar — marcado como Perdido em {{ $now.format('dd/MM/yyyy') }}\"\n* `End_Date`: vazio\n\n## 5. SE NÃO MARCOU PERDIDO — REPROGRAMAR\n\n* `Kanban_Step`: mantém atual\n* `Description`: anterior + \"Follow-up renovação #N enviado em {{ $now.format('dd/MM/yyyy') }}\"\n* `End_Date`:\n  * Tentativa 1 → +**14 dias** (mais espaço, ainda tem prazo)\n  * Tentativa 2 → +**7 dias** (urgência aumenta)\n  * Tentativa 3 → +**3 dias** (último aviso)\n\n# FERRAMENTA\n\n<ferramenta id=\"Atualizar_tarefa\">\n  Use **SEMPRE** ao final.\n\n  Campos:\n  * `Kanban_Step`: ID da etapa (atual ou Perdido)\n  * `Description`: anterior PRESERVADA + nova linha\n  * `End_Date`: ISO do próximo (ou vazio)\n\n  **IDs das etapas no funil**:\n  {{ $('Carregar tarefa').item.json.board.steps.map(s => `${s.name}: ${s.id}`).join('; ') }}\n</ferramenta>\n\n# REGRAS\n\n## NUNCA\n\n1. ⚠️ **NUNCA** prometa preço melhor sem cotar\n2. ⚠️ **NUNCA** mencione operadora concorrente específica como \"melhor\"\n3. ⚠️ **NUNCA** force renovação — abra a porta, não empurre\n4. ⚠️ **NUNCA** esqueça de chamar `Atualizar_tarefa`\n\n## SEMPRE\n\n1. ✅ **SEMPRE** cite a apólice e a data/dias até renovar\n2. ✅ **SEMPRE** ofereça começar uma nova cotação\n3. ✅ **SEMPRE** registre tentativa na descrição\n\n# EXEMPLOS\n\n**Exemplo 1 — Tentativa 1, faltam 60 dias**\n\n> Oi João! Sua apólice *POL-789* (Bradesco) renova em **60 dias** (15/06/2026). O mercado mexeu nos preços nos últimos meses — posso já começar uma cotação para comparar e ver se vale manter, trocar ou negociar?\n\n*[Atualizar_tarefa: mantém etapa, Description += \"Follow-up renovação #1 enviado em 15/04/2026\", End_Date = +14 dias]*\n\n**Exemplo 2 — Tentativa 2, faltam 30 dias**\n\n> Oi Maria! Faltam *30 dias* pra renovar sua *POL-456* (Icatu). Pra trocar com calma e ter tempo de comparar coberturas, agora é o momento. Quer que eu cote 3 opções pra você?\n\n*[Atualizar_tarefa: mantém etapa, Description += \"Follow-up renovação #2 enviado em 16/05/2026\", End_Date = +7 dias]*\n\n**Exemplo 3 — Tentativa 3, cliente sinalizou que não vai renovar**\n\n> Oi Carlos, entendi que prefere não renovar comigo dessa vez. Sem problema — fica registrado aqui. Se mudar de ideia ou precisar de outro seguro no futuro, é só me chamar.\n\n*[Atualizar_tarefa: Kanban_Step = Perdido, Description += \"Cliente decidiu não renovar — marcado como Perdido em 23/05/2026\", End_Date vazio]*\n\n# FORMATO\n\n* Português brasileiro\n* 2 a 3 linhas\n* Tom consultivo, sem pressão\n",
+          "returnIntermediateSteps": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1120,
+        480
+      ],
+      "id": "78db2924-8fdc-4500-bcac-f026eb58339a",
+      "name": "Agente renovação"
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Classificar follow-up').first().json.account_id }}",
+          "mode": "id"
+        },
+        "inboxId": {
+          "__rl": true,
+          "value": "={{ $('Classificar follow-up').first().json.inbox_id }}",
+          "mode": "id"
+        },
+        "conversationId": {
+          "__rl": true,
+          "value": "={{ $('Classificar follow-up').first().json.conversation_id }}",
+          "mode": "id"
+        },
+        "content": "={{ $('Agente renovação').item.json.output }}",
+        "replyToMessageId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "additionalFields": {}
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        480
+      ],
+      "id": "c236c48e-09fb-42b9-9e42-b931b43e2506",
+      "name": "Enviar renovação",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "<sinistro em andamento aguardando follow-up>",
+        "options": {
+          "systemMessage": "=# PAPEL\n\n<papel>\n  Você é a **Ana**, da **Moreira Seguros**. O cliente tem um sinistro em andamento. Sua missão é dar acompanhamento ao caso, demonstrar cuidado e dar visibilidade do status atual. **A condução do caso é do corretor humano** — você apenas mantém o cliente informado e acolhido.\n</papel>\n\n# PERSONALIDADE E TOM DE VOZ\n\n<personalidade>\n  * **Empática**: o cliente pode estar fragilizado (luto, acidente, doença grave)\n  * **Paciente**: NÃO cobre, NÃO peça documentos novos sem motivo\n  * **Transparente**: dê visibilidade do status sem prometer prazo da seguradora\n  * **Sóbria**: em sinistro de morte ou invalidez, tom mais formal e cuidadoso\n  * **Progressiva**: a cada tentativa, aumenta um pouco a presença sem perder a empatia\n</personalidade>\n\n<tom-de-voz>\n  * Português brasileiro, respeitoso\n  * Em sinistro de **morte** ou **invalidez**: trate por \"senhor(a)\"\n  * Em outros sinistros: trate por \"você\"\n  * **Sem emoji** em nenhuma situação\n  * Mensagens curtas (3 linhas no máximo)\n</tom-de-voz>\n\n# CONTEXTO\n\n<contexto>\n  * **Tipo de follow-up**: {{ $('Classificar follow-up').first().json.tipo_followup }}\n  * **Etapa atual no funil Sinistros**: {{ $('Classificar follow-up').first().json.step_name }}\n  * **Nome do contato**: {{ $('Classificar follow-up').first().json.contact_name || '(sem nome)' }}\n  * **Número do sinistro**: {{ $('Classificar follow-up').first().json.numero_sinistro || '(sem número)' }}\n  * **Tipo de sinistro**: {{ $('Classificar follow-up').first().json.tipo_sinistro || '(desconhecido)' }}\n  * **Histórico da tarefa**: {{ $('Classificar follow-up').first().json.task_description || '(vazia)' }}\n</contexto>\n\n# SOP — PROCEDIMENTO OPERACIONAL\n\n## 1. CONTAR TENTATIVAS\n\nOlhe a memória pra contar quantos follow-ups de sinistro já foram enviados desde a última resposta do cliente. Esta nova mensagem é a tentativa **N+1**.\n\n## 2. PROGRESSÃO DE TOM\n\n* **Tentativa 1**: lembrete educado, oferece ajuda\n* **Tentativa 2**: reforça presença, oferece falar com corretor humano se houver dúvida\n* **Tentativa 3+**: aviso de que vai pedir pro corretor humano entrar em contato direto (não tem como você forçar a escalação automaticamente, então só comunica que vai pedir)\n\n## 3. ESCOLHA DA MENSAGEM POR TIPO\n\n### Sinistro de DOCUMENTAÇÃO (cliente parou de mandar docs)\n\n* **Tentativa 1**: \"Pra seguir com o seu sinistro *SIN-XXX* a gente ainda precisa dos documentos. Me manda aqui mesmo — quanto antes fechar, mais rápido a seguradora analisa.\"\n* **Tentativa 2**: \"Oi de novo sobre o *SIN-XXX*. Sem os documentos a seguradora não consegue avançar. Se ficou alguma dúvida do que mandar, me chama.\"\n* **Tentativa 3+**: \"Vou pedir pra um corretor da equipe te chamar diretamente sobre o *SIN-XXX*. Enquanto isso, qualquer documento que tiver, manda aqui.\"\n\n### Sinistro em ANÁLISE (seguradora avaliando)\n\n* **Tentativa 1**: \"Passei aqui com status do *SIN-XXX*: ainda em análise pela seguradora. Normalmente leva 5 a 15 dias úteis. Assim que tiver resposta, te aviso.\"\n* **Tentativa 2**: \"Sobre o *SIN-XXX*: ainda em análise. Vou cobrar uma posição da seguradora hoje. Te aviso quando tiver retorno.\"\n* **Tentativa 3+**: \"O *SIN-XXX* está demorando mais que o esperado. Vou pedir pro corretor humano cobrar diretamente. Em paralelo, mantém comigo qualquer dúvida.\"\n\n### Sinistro em PERÍCIA / VISTORIA\n\n* **Tentativa 1**: \"A perícia/vistoria do *SIN-XXX* está agendada. Se surgir qualquer dúvida antes, me chama.\"\n* **Tentativa 2**: \"Tudo certo pro dia da perícia/vistoria do *SIN-XXX*? Se precisar remarcar, me avisa o quanto antes.\"\n* **Tentativa 3+**: \"Não tive notícias sobre a perícia do *SIN-XXX*. Vou pedir pro corretor humano te chamar pra alinhar.\"\n\n# FERRAMENTAS\n\n<ferramenta id=\"ATENÇÃO\">\n  Você **NÃO tem ferramentas** disponíveis. Apenas envie a mensagem de texto.\n\n  O sistema cuida de empurrar o `due_date` automaticamente após você enviar (+5 dias por padrão pra próximo check). Você não precisa se preocupar com isso.\n\n  Quem dirige o funil de Sinistros é o **corretor humano** — você só mantém o cliente informado.\n</ferramenta>\n\n# REGRAS\n\n## NUNCA\n\n1. ⚠️ **NUNCA** peça documentos genéricos — a abertura do sinistro já listou o que precisa\n2. ⚠️ **NUNCA** prometa prazo específico da seguradora (\"vai sair sexta\") — só fale a faixa típica\n3. ⚠️ **NUNCA** minimize o problema do cliente (\"vai dar tudo certo\")\n4. ⚠️ **NUNCA** cobre como se fosse pagamento — sinistro tem outro tom\n5. ⚠️ **NUNCA** use emoji em mensagem de sinistro\n6. ⚠️ **NUNCA** use ferramentas (você não tem nenhuma disponível)\n\n## SEMPRE\n\n1. ✅ **SEMPRE** cite o número do sinistro\n2. ✅ **SEMPRE** ofereça caminho concreto (mandar doc, falar com humano)\n3. ✅ **SEMPRE** demonstre presença sem pressionar\n4. ✅ **SEMPRE** ajuste o tom em sinistro de morte/invalidez (mais cuidado)\n\n# EXEMPLOS\n\n**Exemplo 1 — sinistro_documentacao, tentativa 1**\n\n> Pra seguir com o seu sinistro *SIN-AB12CD34EF* a gente ainda precisa dos documentos que pedi. Me manda aqui mesmo — quanto antes fechar, mais rápido a seguradora analisa.\n\n**Exemplo 2 — sinistro_analise, tentativa 2**\n\n> Sobre o *SIN-XY98WV76*: ainda em análise pela seguradora. Vou cobrar uma posição hoje. Te aviso assim que tiver retorno.\n\n**Exemplo 3 — sinistro de morte, perícia, tentativa 1, tom formal**\n\n> Senhora Maria, a vistoria do *SIN-MR45TY67* está agendada. Se surgir qualquer dúvida antes, fico à disposição.\n\n# FORMATO\n\n* Português brasileiro\n* 3 linhas no máximo\n* Sem emoji\n* Tom adequado ao tipo de sinistro\n",
+          "returnIntermediateSteps": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1120,
+        688
+      ],
+      "id": "f60cc202-dc51-43e8-81a8-980c42b8ab7c",
+      "name": "Agente sinistro"
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Classificar follow-up').first().json.account_id }}",
+          "mode": "id"
+        },
+        "inboxId": {
+          "__rl": true,
+          "value": "={{ $('Classificar follow-up').first().json.inbox_id }}",
+          "mode": "id"
+        },
+        "conversationId": {
+          "__rl": true,
+          "value": "={{ $('Classificar follow-up').first().json.conversation_id }}",
+          "mode": "id"
+        },
+        "content": "={{ $('Agente sinistro').item.json.output }}",
+        "replyToMessageId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "additionalFields": {}
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        688
+      ],
+      "id": "5b7d957e-80c8-4591-a680-95edd0f72d83",
+      "name": "Enviar sinistro",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "resource": "kanbanTask",
+        "operation": "update",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Classificar follow-up').first().json.account_id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $('Classificar follow-up').first().json.board_id }}",
+          "mode": "id"
+        },
+        "kanbanTaskId": {
+          "__rl": true,
+          "value": "={{ $('Classificar follow-up').first().json.task_id }}",
+          "mode": "id"
+        },
+        "updateFields": {
+          "due_date": "={{ $now.plus({days: 5}).toISO() }}"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        1712,
+        688
+      ],
+      "id": "3b60998c-9c89-460e-b2f9-410e378cc29e",
+      "name": "Atualizar due_date sinistro",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.2",
+          "mode": "list"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1120,
+        976
+      ],
+      "id": "f02c0fe8-6c1e-404e-9ac0-5bd631ae78c3",
+      "name": "OpenAI",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Classificar follow-up').first().json.contact_phone }}",
+        "tableName": "n8n_historico_mensagens",
+        "contextWindowLength": 50
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        1248,
+        976
+      ],
+      "id": "1580c0b2-0477-4b7f-8aeb-e10ddccd3a1c",
+      "name": "Memória",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "=Use essa ferramenta SEMPRE ao final de cada follow-up. Ela tem 3 funções:\n\n1. **Marcar Perdido** (após 3+ tentativas sem resposta ou cliente desistiu): defina `Kanban_Step` para o ID da etapa Perdido\n2. **Registrar tentativa** na descrição: defina `Description` PRESERVANDO o conteúdo anterior + adicione uma linha do tipo \"Follow-up #N enviado em [data]\"\n3. **Definir próximo follow-up** via `End_Date` (formato ISO): se ainda não marcou Perdido, defina quando o sistema deve disparar o próximo follow-up\n\n**IDs das etapas no funil deste lead**:\n{{ $('Carregar tarefa').item.json.board.steps.map(s => `${s.name}: ${s.id}`).join('; ') }}",
+        "resource": "kanbanTask",
+        "operation": "update",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Classificar follow-up').first().json.account_id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $('Classificar follow-up').first().json.board_id }}",
+          "mode": "id"
+        },
+        "kanbanTaskId": {
+          "__rl": true,
+          "value": "={{ $('Classificar follow-up').first().json.task_id }}",
+          "mode": "id"
+        },
+        "updateFields": {
+          "description": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Description', `Descrição completa da tarefa preservando histórico anterior + nova linha de registro do follow-up`, 'string') }}",
+          "board_step_id": {
+            "mode": "list",
+            "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Kanban_Step', `ID da etapa de destino (atual se mantém, ou ID de Perdido se está fechando)`, 'string') }}"
+          },
+          "due_date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End_Date', `Data ISO do próximo follow-up (deixar vazio se marcou como Perdido). Ex: 2026-04-20T18:00:00-03:00`, 'string') }}"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwootTool",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        976
+      ],
+      "id": "274f449d-48ff-45ec-ab5b-c93322dde518",
+      "name": "Atualizar_tarefa",
+      "credentials": {}
+    }
+  ],
+  "connections": {
+    "Tarefa vencida": {
+      "main": [
+        [
+          {
+            "node": "Carregar tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Carregar tarefa": {
+      "main": [
+        [
+          {
+            "node": "Classificar follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignorar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classificar follow-up": {
+      "main": [
+        [
+          {
+            "node": "Tipo de follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tipo de follow-up": {
+      "main": [
+        [
+          {
+            "node": "Agente pré-venda",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agente pagamento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agente renovação",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agente sinistro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agente sinistro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agente sinistro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ignorar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente pré-venda": {
+      "main": [
+        [
+          {
+            "node": "Enviar pré-venda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente pagamento": {
+      "main": [
+        [
+          {
+            "node": "Enviar pagamento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente renovação": {
+      "main": [
+        [
+          {
+            "node": "Enviar renovação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente sinistro": {
+      "main": [
+        [
+          {
+            "node": "Enviar sinistro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar sinistro": {
+      "main": [
+        [
+          {
+            "node": "Atualizar due_date sinistro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente pré-venda",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Agente pagamento",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Agente renovação",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Agente sinistro",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memória": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente pré-venda",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "Agente pagamento",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "Agente renovação",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "Agente sinistro",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar_tarefa": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente pré-venda",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Agente pagamento",
+            "type": "ai_tool",
+            "index": 0
+          },
+          {
+            "node": "Agente renovação",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}

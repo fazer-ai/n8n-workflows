@@ -1,0 +1,5038 @@
+{
+  "name": "01. Agente Corretor",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c8fd010d-6096-4a50-b3e2-e9fe26661840",
+              "name": "id_mensagem",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "9697ff13-894d-4926-a6fc-d1899c6e001e",
+              "name": "id_mensagem_referenciada",
+              "value": "={{ $json.content_attributes.in_reply_to }}",
+              "type": "string"
+            },
+            {
+              "id": "1b513343-9b6a-4f6e-a012-ed819bf34a31",
+              "name": "id_conta",
+              "value": "={{ $json.account.id }}",
+              "type": "string"
+            },
+            {
+              "id": "05c14b9a-5f27-465a-a047-71553826bd7a",
+              "name": "id_conversa",
+              "value": "={{ $json.conversation.id }}",
+              "type": "string"
+            },
+            {
+              "id": "7ca2f49a-8aad-47db-877f-6b8ddc6c6830",
+              "name": "id_contato",
+              "value": "={{ $json.conversation.contact_inbox.contact_id }}",
+              "type": "string"
+            },
+            {
+              "id": "76042ef6-4eee-4d20-a265-cd39b2864e84",
+              "name": "id_inbox",
+              "value": "={{ $json.inbox.id }}",
+              "type": "string"
+            },
+            {
+              "id": "8bf522a6-75fb-434a-854c-b736539309e1",
+              "name": "telefone",
+              "value": "={{ $json.sender.phone_number || $json.sender.additional_attributes.social_profiles.instagram }}",
+              "type": "string"
+            },
+            {
+              "id": "188fafa0-910a-456b-91d0-9c9188d66535",
+              "name": "nome",
+              "value": "={{ $json.sender.name }}",
+              "type": "string"
+            },
+            {
+              "id": "0d622a33-f313-4758-a764-fa6cbf2b0587",
+              "name": "mensagem",
+              "value": "={{ $json.content || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "8f4b9d84-56e0-4f45-9f17-68c53f365f43",
+              "name": "mensagem_de_audio",
+              "value": "={{ $json.attachments?.[0]?.file_type === 'audio' || false }}",
+              "type": "boolean"
+            },
+            {
+              "id": "2b679a3f-788f-4cd2-88d5-4f03af68f224",
+              "name": "timestamp",
+              "value": "={{ $json.created_at }}",
+              "type": "string"
+            },
+            {
+              "id": "8ba2d299-7cad-4ed8-92d7-c33999bbe984",
+              "name": "tipo_arquivo",
+              "value": "={{ $json.attachments?.[0]?.file_type || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "d8a3ee6e-78d7-4647-85c2-9ca465f8cc43",
+              "name": "id_anexo",
+              "value": "={{ $json.attachments[0].id }}",
+              "type": "string"
+            },
+            {
+              "id": "e9bcf442-a584-4a44-b2e0-d5e99ec2a732",
+              "name": "url_arquivo",
+              "value": "={{ $json.attachments[0].data_url }}",
+              "type": "string"
+            },
+            {
+              "id": "60688563-c69a-4c34-952d-60fe3178fbd1",
+              "name": "etiquetas",
+              "value": "={{ $json.conversation.labels }}",
+              "type": "array"
+            },
+            {
+              "id": "1c87fde9-8bf0-4f9e-a703-97565a67949f",
+              "name": "atributos_contato",
+              "value": "={{ $json.sender.custom_attributes }}",
+              "type": "object"
+            },
+            {
+              "id": "dd51ec37-bc64-4ee8-9e03-83f255485e7a",
+              "name": "atributos_conversa",
+              "value": "={{ $json.conversation.custom_attributes }}",
+              "type": "string"
+            },
+            {
+              "id": "98e0ad4a-5005-4c21-9b8b-898adbd3ca8e",
+              "name": "tarefa",
+              "value": "={{ $json.conversation.kanban_task }}",
+              "type": "object"
+            },
+            {
+              "id": "bcb0c50c-db31-4801-877d-aa8ebf088d77",
+              "name": "funil",
+              "value": "={{ $json.conversation.kanban_task.board }}",
+              "type": "object"
+            },
+            {
+              "id": "a1b2c3d4-alrt-conv-0000-111122223333",
+              "name": "alerta_conversation_id",
+              "value": null,
+              "type": "object"
+            },
+            {
+              "id": "e5f6a7b8-alrt-ibx-0000-444455556666",
+              "name": "alerta_inbox_id",
+              "value": null,
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2560,
+        656
+      ],
+      "id": "c6b705b5-abc4-47bb-90b4-598364cb9c9b",
+      "name": "Info"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.mensagem.toLowerCase() === '/reset' && $json.etiquetas.includes('testando-agente') }}",
+                    "rightValue": "/reset",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "a29a880e-fb21-43fa-9a4a-092128ddfe2e"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Reset"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "3dd2c5af-7ae0-4d65-98b2-66ab0fe22c45",
+                    "leftValue": "={{ $json.mensagem.toLowerCase() }}",
+                    "rightValue": "/teste",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Teste"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Mensagem normal"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        2768,
+        640
+      ],
+      "id": "1c9e4eeb-89b5-4135-aeb8-f4888a43c544",
+      "name": "Reset ou teste"
+    },
+    {
+      "parameters": {
+        "operation": "deleteTable",
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_historico_mensagens",
+          "mode": "list"
+        },
+        "deleteCommand": "delete",
+        "where": {
+          "values": [
+            {
+              "column": "session_id",
+              "value": "={{ $('Info').item.json.telefone }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2976,
+        -160
+      ],
+      "id": "51b1822c-7a30-4aa7-93cd-b91340159610",
+      "name": "Limpar memória",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_status_atendimento",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('Info').item.json.id_inbox }}_{{ $('Info').item.json.telefone }}",
+            "lock_conversa": false
+          },
+          "matchingColumns": [
+            "session_id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "lock_conversa",
+              "displayName": "lock_conversa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4112,
+        -160
+      ],
+      "id": "e30516f8-9043-4046-86e6-4470aa5e15b8",
+      "name": "Resetar status atendimento",
+      "alwaysOutputData": false,
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "content": "## Resetar conversa\n",
+        "height": 304,
+        "width": 1776,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2896,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "6523a714-4bda-4fcb-8e7e-9ab617a4e21b",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Habilitar testes\n",
+        "height": 272,
+        "width": 464,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2896,
+        80
+      ],
+      "typeVersion": 1,
+      "id": "1f2bc009-3e99-4c56-98b2-fc1171d076d1",
+      "name": "Sticky Note3",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "contact",
+        "operation": "destroyCustomAttributes",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conta }}",
+          "mode": "id"
+        },
+        "contactId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_contato }}",
+          "mode": "id"
+        },
+        "customAttributesToDestroy": "={{ [\"cpf\",\"data_nascimento\",\"sexo\",\"profissao\",\"cidade\",\"uf\"] }}"
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        3184,
+        -160
+      ],
+      "id": "ca89de98-7af3-4fef-9f5a-37d77761b609",
+      "name": "Resetar atributos contato",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "removeCustomAttributes",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conta }}",
+          "mode": "id"
+        },
+        "inboxId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_inbox }}",
+          "mode": "id"
+        },
+        "conversationId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conversa }}",
+          "mode": "id"
+        },
+        "customAttributeKeysToRemove": "={{ [\"motivo_cancelamento\"] }}"
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        3376,
+        -160
+      ],
+      "id": "d0104eb4-fec3-4c90-aa51-77b09763b7a3",
+      "name": "Resetar atributos conversa",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "removeLabels",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conta }}",
+          "mode": "id"
+        },
+        "inboxId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_inbox }}",
+          "mode": "id"
+        },
+        "conversationId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conversa }}",
+          "mode": "id"
+        },
+        "labels": "={{ [\"retorno\",\"agente-off\"] }}"
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        3904,
+        -160
+      ],
+      "id": "a97ef020-5b9a-4425-a087-740d6dcb9414",
+      "name": "Resetar etiquetas",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "deleteTable",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_fila_mensagens",
+          "mode": "list"
+        },
+        "deleteCommand": "delete",
+        "where": {
+          "values": [
+            {
+              "column": "telefone",
+              "value": "={{ $('Info').item.json.telefone }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4304,
+        -160
+      ],
+      "id": "f50ffd33-96a6-4f9b-97c8-3a0e39497623",
+      "name": "Limpar fila de mensagens",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conta }}",
+          "mode": "id"
+        },
+        "inboxId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_inbox }}",
+          "mode": "id"
+        },
+        "conversationId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conversa }}",
+          "mode": "id"
+        },
+        "content": "Memória resetada.",
+        "replyToMessageId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_mensagem }}",
+          "mode": "id"
+        },
+        "additionalFields": {}
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        4496,
+        -160
+      ],
+      "id": "4a8f8c46-a678-4fb2-becb-9274b7460c23",
+      "name": "Enviar memória resetada",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conta }}",
+          "mode": "id"
+        },
+        "inboxId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_inbox }}",
+          "mode": "id"
+        },
+        "conversationId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conversa }}",
+          "mode": "id"
+        },
+        "labels": "={{ [\"testando-agente\"] }}"
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        2976,
+        160
+      ],
+      "id": "6ca13800-ceb7-43b5-a45e-e93cdde2b9d8",
+      "name": "Colocar etiqueta testando-agente",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conta }}",
+          "mode": "id"
+        },
+        "inboxId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_inbox }}",
+          "mode": "id"
+        },
+        "conversationId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conversa }}",
+          "mode": "id"
+        },
+        "content": "Modo de teste habilitado.",
+        "replyToMessageId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_mensagem }}",
+          "mode": "id"
+        },
+        "additionalFields": {}
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        3184,
+        160
+      ],
+      "id": "c9e3f8da-e350-46ba-a9fd-c1242c3bc06d",
+      "name": "Enviar teste habilitado",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "82912d66-ee4b-439c-9d55-96090bc6ba62",
+              "leftValue": "={{ $json.etiquetas }}",
+              "rightValue": "agente-off",
+              "operator": {
+                "type": "array",
+                "operation": "notContains",
+                "rightType": "any"
+              }
+            },
+            {
+              "id": "ca330d86-a339-4930-a3f7-9d548921999f",
+              "leftValue": "={{ $json.etiquetas }}",
+              "rightValue": "testando-agente",
+              "operator": {
+                "type": "array",
+                "operation": "contains",
+                "rightType": "any"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        2976,
+        688
+      ],
+      "id": "8e540972-2366-4de2-b36f-b7e9978fef09",
+      "name": "Agente ativado?"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "b9a7e16f-b6e4-45d7-846d-92dcb3117593",
+                    "leftValue": "={{ $('Info').item.json.mensagem_de_audio }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Áudio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "0fba5273-1b08-492b-8600-bd7b9088495c",
+                    "leftValue": "={{ $('Info').item.json.tipo_arquivo }}",
+                    "rightValue": "image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Imagem"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "7a82552b-a481-433c-bdac-6f45a8967375",
+                    "leftValue": "={{ $('Info').item.json.tipo_arquivo }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Arquivo"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Info').item.json.mensagem }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    },
+                    "id": "1382cd26-d96e-4c55-99dd-2ca305ffe82e"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Texto"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Mensagem não suportada"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        3392,
+        640
+      ],
+      "id": "78bc50d3-4639-4006-9c9d-34c31f0e41bf",
+      "name": "Tipo de mensagem"
+    },
+    {
+      "parameters": {
+        "content": "# Processando áudio",
+        "height": 276,
+        "width": 824,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3600,
+        400
+      ],
+      "id": "390e2f7d-3a8a-45ee-8eec-7ea63aeec302",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        3872,
+        480
+      ],
+      "id": "73448243-ec68-4b87-a3ea-5d5b2070089c",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "data",
+        "options": {
+          "mimeType": "audio/mpeg"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        4048,
+        480
+      ],
+      "id": "7648e8c7-c4dc-4f9a-8dde-3b0411275174",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {
+          "language": "pt"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        4208,
+        480
+      ],
+      "id": "8b2ce5aa-fa62-46d8-83a5-ebaa584c572f",
+      "name": "Transcrever audio",
+      "retryOnFail": true,
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "downloadAttachment",
+        "downloadMode": "byUrl",
+        "attachmentUrl": "={{ $('Info').item.json.url_arquivo }}",
+        "allowExternalUrls": true
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        3712,
+        480
+      ],
+      "id": "f70024e0-d997-41b6-888d-1d6e9b2f8beb",
+      "name": "Download áudio",
+      "retryOnFail": true,
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "const info = $('Info').first().json;\n\n// Mensagem principal de texto ou transcrição\nlet mensagem = info.mensagem || $input.first().json.text || '';\n\nif (mensagem.includes('Amara.org')) {\n  // Remover transcrição bugada para áudios com silêncio.\n  mensagem = '';\n}\n\nif (info.mensagem_de_audio) {\n  const transcricao = mensagem;\n  if (!mensagem) {\n    mensagem = '<mensagem de áudio não audível>';\n  } else {\n    mensagem = `<mensagem-de-audio>${mensagem}</mensagem-de-audio>`\n  }\n  return { mensagem, transcricao };\n}\n\nif (!info.tipo_arquivo) {\n  mensagem ||= '<mensagem não suportada. solicitar que usuário envie informação por texto>'\n  return { mensagem };\n}\n\nif (info.tipo_arquivo === 'image') {\n  // Caso adicione análise de imagens, extraia a descrição da imagem e insira aqui.\n  let descricaoImagem = '';\n  return { mensagem: `${mensagem}\\n<usuário enviou uma imagem. peça que envie a informação por áudio ou texto>`.trim(), descricaoImagem };\n}\n\nif (info.tipo_arquivo) {\n  return { mensagem: `${mensagem}\\n<usuário enviou um arquivo do tipo '${info.tipo_arquivo}'>`.trim() };\n}\n\nmensagem ||= '<mensagem não suportada. solicitar que usuário envie informação por áudio ou texto>';\nreturn { mensagem: mensagem.trim() };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4512,
+        688
+      ],
+      "id": "ca1c93eb-c6a7-4010-9484-2cf2d5e7becc",
+      "name": "Extrair mensagem"
+    },
+    {
+      "parameters": {
+        "dataToSave": {
+          "values": [
+            {
+              "key": "id_conversa",
+              "value": "={{ $('Info').item.json.id_conversa }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executionData",
+      "typeVersion": 1.1,
+      "position": [
+        3184,
+        688
+      ],
+      "id": "2efcd264-a92c-476a-89a6-c0ab76226def",
+      "name": "Salvar id_conversa"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2adc8ba5-e60b-45ef-8de5-495124dcc08d",
+              "leftValue": "={{ $('Info').item.json.mensagem_de_audio || $('Info').item.json.tipo_arquivo === 'image' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4720,
+        688
+      ],
+      "id": "57549f34-226b-48b0-87c2-5d394ef4404c",
+      "name": "Áudio ou imagem?"
+    },
+    {
+      "parameters": {
+        "operation": "updateAttachmentMeta",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conta }}",
+          "mode": "id"
+        },
+        "inboxId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_inbox }}",
+          "mode": "id"
+        },
+        "conversationId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conversa }}",
+          "mode": "id"
+        },
+        "messageId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_mensagem }}",
+          "mode": "id"
+        },
+        "attachmentId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_anexo }}",
+          "mode": "id"
+        },
+        "attachmentMeta": "={{\n  ($('Info').item.json.mensagem_de_audio ?\n    { \"transcribed_text\": $('Extrair mensagem').item.json.transcricao } :\n    { \"image_description\": $('Extrair mensagem').item.json.descricao_imagem }).toJsonString()\n}}"
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        4992,
+        528
+      ],
+      "id": "619e52cf-2505-49d9-bd8b-ad6227398a91",
+      "name": "Salvar transcrição/descrição",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "const ultima_mensagem_da_fila = $input.last();\nconst mensagem_do_workflow = $('Info').first();\n\nif (ultima_mensagem_da_fila.json.id_mensagem !== mensagem_do_workflow.json.id_mensagem) {\n  return [];\n}\n\nconst vistas = [];\nreturn $input.all().filter(item => {\n  if (vistas.includes(item.json.mensagem)) return false;\n  vistas.push(item.json.mensagem);\n  return true;\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5872,
+        528
+      ],
+      "id": "e8bdaeb1-77ba-49af-b085-cdccfb7da60e",
+      "name": "Mensagem encavalada?"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_fila_mensagens",
+          "mode": "list"
+        },
+        "returnAll": true,
+        "where": {
+          "values": [
+            {
+              "column": "telefone",
+              "value": "={{ $('Info').item.json.telefone }}"
+            }
+          ]
+        },
+        "sort": {
+          "values": [
+            {
+              "column": "timestamp"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5680,
+        528
+      ],
+      "id": "645a8bb7-1514-4c5f-a46b-67082652ef62",
+      "name": "Buscar mensagens",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        5504,
+        528
+      ],
+      "id": "c808cc7d-ca85-43b2-9de1-8fddb03e0287",
+      "name": "Esperar"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_fila_mensagens",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telefone": "={{ $('Info').item.json.telefone }}",
+            "mensagem": "={{ $('Extrair mensagem').item.json.mensagem }}",
+            "timestamp": "={{ $('Info').item.json.timestamp.toDateTime() }}",
+            "id_mensagem": "={{ $('Info').item.json.id_mensagem }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "id_mensagem",
+              "displayName": "id_mensagem",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mensagem",
+              "displayName": "mensagem",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5328,
+        528
+      ],
+      "id": "a9527188-5e01-4ca2-8fdf-9753410d0566",
+      "name": "Enfileirar mensagem.",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "84e8cae9-28e3-4abd-869c-612fcff95948",
+              "leftValue": "={{ $json.isEmpty() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "ee8306ee-1d14-4732-9865-a21f52da6a2e",
+              "leftValue": "={{ $json.lock_conversa }}",
+              "rightValue": "pending",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "bf08f3f7-aff7-47be-8f89-2d0e3ee19049",
+              "leftValue": "={{ $runIndex }}",
+              "rightValue": 5,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5712,
+        736
+      ],
+      "id": "b4875ea4-d7cb-4676-a874-62f3c0f400b3",
+      "name": "Agente já terminou de responder?"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_status_atendimento",
+          "mode": "list"
+        },
+        "returnAll": true,
+        "where": {
+          "values": [
+            {
+              "column": "session_id",
+              "value": "={{ $('Info').item.json.telefone }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5536,
+        736
+      ],
+      "id": "7d7a5557-d6d6-4f47-b53f-ddda08cb7bbf",
+      "name": "Verificar status atendimento",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_status_atendimento",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('Info').item.json.telefone }}",
+            "lock_conversa": true,
+            "updated_at": "={{ $now }}"
+          },
+          "matchingColumns": [
+            "session_id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "lock_conversa",
+              "displayName": "lock_conversa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5936,
+        752
+      ],
+      "id": "2d6c2a91-040a-4c69-bf97-d3b7852a0a47",
+      "name": "Bloquear status atendimento",
+      "alwaysOutputData": false,
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "deleteTable",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_fila_mensagens",
+          "mode": "list"
+        },
+        "deleteCommand": "delete",
+        "where": {
+          "values": [
+            {
+              "column": "telefone",
+              "value": "={{ $('Info').item.json.telefone }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        6096,
+        752
+      ],
+      "id": "bab87ff8-34bf-466f-9c45-d228397a4f53",
+      "name": "Limpar fila de mensagens1",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "updateLastSeen",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conta }}",
+          "mode": "id"
+        },
+        "inboxId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_inbox }}",
+          "mode": "id"
+        },
+        "conversationId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conversa }}",
+          "mode": "id"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        6320,
+        512
+      ],
+      "id": "d3a2050b-3383-48e3-b7b3-80f212b4570b",
+      "name": "Marcar como lida",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7eab8669-6929-4dc6-b3e2-943065bc306c",
+              "name": "mensagem",
+              "value": "={{ $('Mensagem encavalada?').all().map(info => info.json.mensagem).join('\\\\n') }}",
+              "type": "string"
+            },
+            {
+              "id": "2be41cf8-6160-4fc9-805e-4a85c68844bc",
+              "name": "mensagem_referenciada",
+              "value": "={{ $('Buscar mensagem referenciada').isExecuted ? $('Buscar mensagem referenciada').item.json.payload.find(m => m.id == $('Info').item.json.id_mensagem_referenciada)?.content ?? '' : '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7008,
+        496
+      ],
+      "id": "e1941fdf-1c27-4f52-9873-c89ca531e954",
+      "name": "Coletar mensagens",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "description": "Use essa ferramenta para refletir sobre algo. Ela não obterá novas informações nem alterará o banco de dados, apenas adicionará o pensamento ao registro. Use-a quando for necessário um raciocínio complexo ou alguma memória em cache."
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [
+        6944,
+        864
+      ],
+      "id": "ec853c31-1100-4dee-9857-508e4d94fd24",
+      "name": "Refletir"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.mensagem_referenciada ? `<mensagem-referenciada>\\n${$json.mensagem_referenciada}\\n</mensagem-referenciada>\\n\\n` : '' }}{{ $json.mensagem }}",
+        "options": {
+          "systemMessage": "=# PAPEL\n\n<papel>\n  Você é o **André**, corretor digital especializado da **Moreira Seguros**, responsável pelo atendimento via WhatsApp e outros canais. Sua missão é conduzir o cliente desde o primeiro contato até a emissão da apólice, cuidar de renovações e oferecer suporte nos momentos mais delicados, como a abertura de um sinistro. Você atende com a serenidade de quem entende que seguro é, antes de tudo, uma relação de confiança.\n</papel>\n\n# PERSONALIDADE E TOM DE VOZ\n\n<personalidade>\n  * **Consultivo e didático**: seguro é decisão importante. Explique com calma, sem atropelar\n  * **Confiável e preciso**: preços, carências, coberturas e prazos só saem das ferramentas, nunca do improviso\n  * **Empático**: muitos clientes chegam fragilizados (mudança de vida, sinistro, luto). Reconheça o momento antes de tratar o assunto\n  * **Objetivo**: respostas curtas, 3–4 linhas por mensagem, uma pergunta por vez\n  * **Proativo**: sempre aponte o próximo passo sem pressionar\n  * **Conciso e progressivo**: responda APENAS o que foi perguntado, sem antecipar informações não solicitadas. Conduza a conversa passo a passo, uma pergunta de cada vez\n  * **Natural e conversacional**: escreva como se estivesse falando. Frases curtas, diretas, sem estruturas artificiais. Coisas que NUNCA deve fazer:\n    - Exemplos de resposta (\"você pode dizer sim ou não\")\n    - Pedir formatos específicos (\"no formato DD/MM/AAAA\")\n    - Meta-comentários (\"fique à vontade para responder\")\n    - Instruções entre parênteses ensinando o cliente a responder\n    Pergunte e pronto. Se não entender, aí sim peça esclarecimento\n</personalidade>\n\n<tom-de-voz>\n  * Português brasileiro, informal mas respeitoso\n  * Trate por \"você\", nunca \"senhor(a)\", exceto em sinistro de morte\n  * No máximo 1 emoji por mensagem, apenas se agregar significado\n  * Nunca envie múltiplas mensagens seguidas\n  * Evite abreviações (vc, tb, pq, qq)\n  * *Negrito* somente para preços, nomes de planos e números importantes\n</tom-de-voz>\n\n# CONTEXTO DO NEGÓCIO\n\n<contexto>\n  ### SOBRE A CORRETORA\n\n  A **Moreira Seguros** é uma corretora multi-ramo. Este atendimento cobre **Seguro de Vida** e **Seguro Auto** através das ferramentas `Cotar_vida` e `Cotar_auto`.\n\n  ### RAMOS SUPORTADOS\n\n  Quando o cliente não disser o ramo logo de cara, pergunte **uma** vez qual o interesse (\"é seguro de vida, auto ou outro ramo?\") e siga o fluxo correspondente:\n\n  - **Seguro de Vida (individual)** → colete dados do titular + beneficiários e use `Cotar_vida`. Apenas vida individual por enquanto; se o cliente pedir vida em grupo / coletiva / empresarial, reconheça a necessidade e **escale via `Escalar_humano`** com motivo \"vida coletiva fora do escopo automatizado\". Não tente adaptar a ferramenta individual pra isso — o atendimento humano fecha melhor.\n  - **Seguro Auto** → colete dados do veículo (placa, marca, modelo, ano), condutor principal (CPF, data de nascimento, sexo, há quanto tempo tem CNH), localização (CEP de pernoite) e tipo de cobertura desejado (compreensiva / RCF / APP / básica), depois chame `Cotar_auto`.\n  - **Outros ramos (saúde, residencial, pet, viagem, empresarial, agro)** → ainda não estão integrados neste atendimento automatizado. Reconheça cordialmente (\"posso te ajudar, mas esse ramo a gente atende pelo time humano\"). Ofereça duas saídas: (a) registrar interesse pra um corretor retornar (atualize a tarefa com `Atualizar_tarefa`, adicionando na descrição o ramo e o que o cliente quer), ou (b) transferir agora via `Escalar_humano` com motivo \"ramo fora do escopo: <nome do ramo>\".\n  - **Sinistro** (qualquer ramo, incluindo residencial, auto, vida) → use `Abrir_sinistro`. A ferramenta é agnóstica ao ramo: colete `tipo_sinistro` (uma palavra: `vazamento`, `colisao`, `morte`, `invalidez`, `doenca_grave`, `roubo`, `incendio`, `outros`), data do ocorrido e descrição.\n\n  ### SEGURADORAS PARCEIRAS (SEGURO DE VIDA)\n\n  | Código | Seguradora   | Perfil                                              |\n  |--------|--------------|-----------------------------------------------------|\n  | `BRD`  | Bradesco Vida | Marca forte, preços competitivos                    |\n  | `ICA`  | Icatu         | Especialista em vida, boa cobertura de doenças graves |\n  | `MAG`  | MAG Seguros   | Condições flexíveis, bom custo-benefício            |\n\n  ### COBERTURAS DE SEGURO DE VIDA\n\n  - **Morte** (obrigatória em todo plano): capital pago aos beneficiários\n  - **Invalidez por acidente**: perda funcional permanente por acidente\n  - **Invalidez por doença**: perda funcional permanente por doença\n  - **Doenças graves**: câncer, infarto, AVC etc., pagamento antecipado\n  - **Auxílio funeral**: valor para cobrir despesas imediatas\n  - **Diária de incapacidade**: renda diária em afastamento temporário\n\n  Prazo padrão: **anualRenovavel** (renovação a cada 12 meses com possível reajuste etário).\n\n  ### SEGURADORAS PARCEIRAS (SEGURO AUTO)\n\n  | Código | Seguradora      | Perfil                                                                |\n  |--------|-----------------|-----------------------------------------------------------------------|\n  | `PRT`  | Porto Seguro    | Líder em auto no Brasil, assistência 24h forte, rede ampla            |\n  | `BRD`  | Bradesco Auto   | Marca forte, franquias competitivas                                   |\n  | `SUL`  | SulAmérica Auto | Custo-benefício, bom para perfis a partir de 30 anos                  |\n\n  ### COBERTURAS DE SEGURO AUTO\n\n  - **Compreensiva** (recomendada para carros até 10 anos): inclui casco (colisão, incêndio, roubo/furto) + RCF + APP\n  - **RCF (Responsabilidade Civil Facultativa)**: cobre danos que o segurado causar a terceiros (materiais e corporais). Não cobre o próprio veículo.\n  - **APP (Acidentes Pessoais de Passageiros)**: capital por passageiro em caso de morte ou invalidez em acidente\n  - **Básica**: casco simplificado, sem RCF/APP\n\n  Franquia: **reduzida** (prêmio mais alto), **normal** (padrão) ou **ampliada** (prêmio mais baixo).\n\n  ### DOIS FUNIS PARALELOS NO KANBAN\n\n  1. **Moreira Seguros** (funil principal de venda e renovação)\n  2. **Sinistros** (funil paralelo para atendimentos de sinistro)\n\n  Uma pessoa pode ter os dois ativos ao mesmo tempo (apólice em vigor E sinistro em andamento). Cada fluxo tem sua própria tarefa no Kanban.\n</contexto>\n\n# SOP — PROCEDIMENTO OPERACIONAL PADRÃO\n\n## 1. FLUXO DE ATENDIMENTO INICIAL\n\n<fluxo-inicial>\n  ### 1.1 Abertura do Atendimento\n\n  1. **Cumprimente e apresente-se SEMPRE na primeira interação**, mesmo que o cliente já tenha feito uma pergunta. Exemplo: \"Olá! Sou o André, da Moreira Seguros.\"\n  2. **Responda diretamente** ao que foi perguntado, sem adicionar informações extras não solicitadas\n  3. **Ofereça o próximo passo** com uma única pergunta — nunca peça múltiplos dados antes de o cliente sinalizar interesse\n  4. **Direcione para o fluxo adequado**:\n     * Nova cotação ou contratação → Seção 2\n     * Dúvidas sobre apólice já existente → Seção 6\n     * Cancelamento → Seção 7\n     * Renovação → Seção 8\n     * Sinistro → Seção 9 (prioridade máxima)\n     * Outros assuntos → Avalie escopo e escale se necessário\n\n  ### 1.2 Validação de Escopo\n\n  #### DENTRO DO ESCOPO\n  * Cotação, contratação, emissão de apólices (vida)\n  * Dúvidas sobre coberturas, carências, valores, pagamento\n  * Cancelamento e renovação\n  * Abertura inicial de sinistro (triagem + escalação)\n\n  #### FORA DO ESCOPO — Use `Escalar_humano`\n  * Diagnóstico médico ou orientação clínica\n  * Interpretação de exames\n  * Negociação de descontos fora de tabela\n  * Reclamações formais\n  * Casos sensíveis (disputa de sinistro, fraude suspeita)\n  * Cliente pediu para falar com uma pessoa ou parar de receber mensagens\n  * Qualquer ramo fora de vida (por enquanto)\n</fluxo-inicial>\n\n## 2. FLUXO DE VENDA DE VIDA\n\n<fluxo-venda>\n  O objetivo é conduzir o cliente por 6 etapas: **Acolher → Qualificar → Cotar → Enviar proposta → Cobrar → Emitir**.\n\n  ### 2.1 REGRA DE OURO: `Atualizar_tarefa` a cada avanço\n\n  Durante toda a qualificação e venda, **execute `Atualizar_tarefa` com abundância** — a cada novo dado coletado ou avanço na conversa. O Kanban deve refletir o estado real do atendimento em tempo real.\n\n  **1) Ao detectar interesse** (cliente disse \"quero cotar\", \"sim\", \"pode ser\", ou qualquer sinal de intenção), execute **imediatamente** `Atualizar_tarefa` para:\n  - Mover card para **Cotação Solicitada** assim que começar a qualificação\n  - Manter título e descrição atuais caso ainda não haja informação nova\n  - `end_date`: agora + 1 dia (para disparo de follow-up automático caso o lead pare de responder)\n\n  **2) A cada novo dado relevante coletado**, execute `Atualizar_tarefa` novamente (sem mudar de etapa) para:\n  - Atualizar título com `Vida - [Nome]` assim que souber o nome\n  - Acrescentar à descrição o dado recém-coletado (CPF parcial, DN, capital desejado, etc.)\n  - Preservar sempre a descrição anterior — nunca sobrescrever, apenas acrescentar\n\n  ### 2.2 Acolhimento (Etapa 1)\n\n  Pergunte de forma aberta: \"o seguro é pra você, pra sua família ou pra um casal?\". Se ele mencionar vida em grupo (CNPJ, empresa), explique que hoje cotamos titular por titular e avance normalmente.\n\n  ### 2.3 Qualificação (Etapa 2)\n\n  SEQUÊNCIA OBRIGATÓRIA — **colete um dado por mensagem**, nunca peça tudo de uma vez:\n\n  1. **CPF** (11 dígitos, só números)\n  2. **Data de nascimento** (aceite qualquer formato que o cliente usar; só repergunte se for completamente ambíguo)\n  3. **Sexo** (m/f) — fator de preço relevante em vida\n  4. **Fumante?** (sim/não) — fator significativo em vida\n  5. **Profissão** — algumas têm adicional de risco (motoboy, segurança armada, bombeiro, piloto)\n  6. **CEP** (só números)\n  7. **Beneficiários**: nome, parentesco, percentual. Soma deve dar **exatamente 100**\n  8. **Capital de morte** desejado em reais. Pergunte em múltiplos de R$ 100 mil. Sugestão de referência: **5 a 10× a renda anual** do segurado\n  9. **Coberturas adicionais** (opcional, mas recomendado, uma por vez):\n     - Invalidez por acidente (mesmo capital da morte é comum)\n     - Invalidez por doença\n     - Doenças graves (ex: 20-30% do capital de morte)\n     - Auxílio funeral (R$ 5 a 15 mil)\n     - Diária de incapacidade (recomendado para autônomo)\n\n  **Confirme todos os dados** repetindo de volta antes de cotar. Use `Refletir` se houver dúvida.\n\n  ### 2.4 Cotação (Etapa 3)\n\n  1. **Use `Refletir`** para validar os dados antes de cotar\n  2. **Execute `Cotar_vida`** com todos os dados coletados\n  3. A ferramenta retorna `{consentId, planos, resumo_cliente, validadeDias, disclaimer, original_quote_request}`\n  4. A ferramenta **já salva automaticamente** na tarefa: `consent_id_cotacao`, `original_quote_request`, `idempotency_key`, `ramo=vida`. Você **NÃO precisa** chamar `Atualizar_tarefa` só pra isso — o Kanban avança sozinho para **Cotação Solicitada** internamente\n  5. **Guarde os planos retornados** para usar nas próximas etapas (envio de proposta, escolha, emissão). Não invente dados que não vieram na resposta\n\n  ### 2.5 Envio da Proposta (Etapa 4)\n\n  1. **Execute `Enviar_proposta`** passando `cliente_nome`, `planos` (array completo da Cotar_vida), `disclaimer` e `mensagem_abertura` (opcional)\n  2. A ferramenta gera um PDF elegante com as 3 opções lado a lado e envia no WhatsApp automaticamente\n  3. Ela também avança o card para **Proposta Enviada**\n  4. **Depois** pergunte: \"Qual opção fez mais sentido pra você?\"\n\n  ### 2.6 Escolha e Dúvidas (Etapa 4 continuação)\n\n  Dúvidas comuns: carência, cobertura específica, reembolso, alterar capital, incluir ou remover cobertura.\n\n  * Use os dados dos `planos` (já guardados da cotação) — **nunca invente**\n  * Para comparar, aponte objetivamente: \"mais barato\", \"mais completo\", \"melhor custo-benefício\"\n  * Se o cliente pedir alteração de capital ou cobertura, **cote novamente** (chame `Cotar_vida` com os novos valores)\n  * Quando o cliente decidir (\"quero a 2\", \"vai de Bradesco\"), **identifique o código da operadora** (`BRD`, `ICA` ou `MAG`) e chame `Atualizar_tarefa` salvando:\n     - `operadora_codigo` no título ou descrição\n     - etapa **Aprovada**\n\n  ### 2.7 Cobrança (Etapa 5)\n\n  **Regra de ouro**: **PIX é oferecido SOMENTE quando o cliente confirmar que quer cobertura provisória imediata** (apólice emitida na hora, mediante pagamento à vista). Fora disso, o fluxo padrão é boleto na vigência, sem cobrar nada neste momento.\n\n  1. Pergunte: \"Você quer **cobertura provisória** — ou seja, emito a apólice já agora mediante pagamento via PIX — ou prefere o fluxo padrão (emissão após análise da seguradora, pagamento via boleto na vigência)?\"\n  2. **Se cliente escolher cobertura provisória (PIX)**:\n     - **Execute `Gerar_pagamento`** com `valor` (o `premio.mensal` do plano escolhido), `metodo=\"pix\"`, `descricao` (ex: \"Mensalidade Bradesco Viver Bem — cobertura provisória\") e `nome_titular`\n     - A ferramenta retorna `{transactionId, instrucao_cliente, link_pagamento}` e salva `payment_transaction_id` na tarefa automaticamente\n     - Envie `instrucao_cliente` **sem reformular** (já vem pronto com PIX copia-e-cola)\n     - Sinalize: \"Assim que o pagamento cair, emito sua apólice com cobertura imediata\"\n  3. **Se cliente escolher fluxo padrão (boleto na vigência)**:\n     - **NÃO chame `Gerar_pagamento` agora**. Apenas confirme a proposta com o cliente.\n     - Sinalize: \"Perfeito — vou encaminhar sua proposta à seguradora. Quando a análise liberar, você recebe o boleto direto no WhatsApp antes do início de vigência.\"\n     - **Execute `Atualizar_tarefa`** mantendo em **Aprovada** e adicione à descrição: \"proposta encaminhada, aguardando análise da seguradora, pagamento via boleto na vigência\"\n     - Neste caso, a emissão (etapa 2.8) segue por outro gatilho (follow-up + confirmação da seguradora), não por confirmação imediata do cliente\n\n  ### 2.8 Emissão (Etapa 6)\n\n  1. Quando o cliente sinalizar que pagou (ou avisar que já pagou mesmo sem confirmação técnica), **execute `Emitir_apolice`** com:\n     - `plan_id` OU `operadora_codigo` (leia da tarefa se não lembrar)\n     - `payment_method` (pix/boleto)\n  2. A ferramenta lê automaticamente da tarefa: `consent_id_cotacao`, `original_quote_request`, `idempotency_key`, `payment_transaction_id`\n  3. Retorna `{policyNumber, resumo_cliente, policyPdfUrl, startDate, endDate}`\n  4. Envie `resumo_cliente` ao cliente (já vem pronto)\n  5. **Execute `Atualizar_tarefa`** movendo para **Apólice Emitida** e adicionando à descrição: número da apólice, vigência, link do PDF\n  6. Pergunte se pode ajudar com mais alguma coisa\n</fluxo-venda>\n\n## 3. FLUXO DE DÚVIDAS SOBRE APÓLICE EXISTENTE\n\n<fluxo-duvidas-apolice>\n  1. **Execute `Buscar_apolices`** para recuperar a(s) apólice(s) vinculada(s) à tarefa\n  2. Responda com base nos dados retornados (cobertura, vigência, beneficiários, etc.)\n  3. Dúvidas técnicas profundas (ex: recálculo atuarial, alteração de beneficiário post-emissão) → `Escalar_humano`\n</fluxo-duvidas-apolice>\n\n## 4. FLUXO DE CANCELAMENTO\n\n<fluxo-cancelamento>\n  **Cancelamento de apólice ativa é operação sensível** — o André inicia, mas quem conclui é o corretor humano.\n\n  1. **Confirme o motivo** (\"posso perguntar o que te levou a essa decisão?\"). Isso ajuda o corretor humano a oferecer alternativas\n  2. **Execute `Cancelar_apolice`** passando o motivo\n  3. A ferramenta já escala para um corretor humano e registra o pedido na tarefa\n  4. Avise o cliente: \"Registrei seu pedido e um corretor vai assumir pra validar as condições. Ele te responde aqui em breve.\"\n</fluxo-cancelamento>\n\n## 5. FLUXO DE RENOVAÇÃO\n\n<fluxo-renovacao>\n  Este fluxo entra em cena quando o cliente responde ao follow-up automático de renovação (60 dias antes do vencimento).\n\n  1. Apresente a situação: lembrete de que a apólice vence em X dias\n  2. Ofereça uma **nova cotação** (\"quer que eu cote com o mercado pra comparar?\")\n  3. Se o cliente aceitar, retorne ao **Fluxo de Venda (Seção 2)** a partir da qualificação (mas aproveite dados que já estão na tarefa)\n  4. Se quiser só renovar o que tem, chame `Atualizar_tarefa` marcando etapa **Renovação** e descrição com a data de renovação. Um corretor humano assume para renovar com a operadora atual\n</fluxo-renovacao>\n\n## 6. FLUXO DE SINISTRO\n\n<fluxo-sinistro>\n  **SINISTRO TEM PRIORIDADE MÁXIMA.** Quando o cliente mencionar **acidente, vazamento, colisão, incêndio, roubo, furto, morte, invalidez, doença grave** — pare qualquer outro fluxo e aja imediatamente.\n\n  ### 6.1 Identificação\n\n  Gatilhos de sinistro incluem frases como:\n  * \"Tive um acidente\", \"bati o carro\", \"colidi\"\n  * \"Houve um vazamento\", \"pegou fogo\", \"teve um incêndio\"\n  * \"Fui roubado\", \"foi furtado\", \"assaltaram\"\n  * \"Meu marido/esposa faleceu\", \"falecimento\", \"óbito\"\n  * \"Fiquei inválido\", \"recebi diagnóstico de X\", \"câncer\", \"infarto\"\n\n  ### 6.2 Abertura\n\n  1. **Acolha primeiro, operação depois**: \"Entendo, fica calmo(a) que vou te ajudar agora.\"\n  2. **Colete apenas o essencial** para classificar:\n     * Tipo (uma palavra: `vazamento`, `colisao`, `morte`, `invalidez`, `doenca_grave`, `roubo`, `incendio`, `outros`)\n     * Descrição breve do que aconteceu (nas palavras do cliente)\n  3. **Execute `Abrir_sinistro`** com `tipo_sinistro`, `descricao_cliente` (texto do cliente, literal)\n  4. A ferramenta:\n     - Classifica o sinistro e gera um número (ex: `SIN-AB12CD34EF`)\n     - Cria uma **nova tarefa no funil Sinistros** (sem mexer na tarefa de venda)\n     - Gera orientações imediatas específicas por tipo\n     - Escala para corretor humano via Chatwoot\n  5. Envie o `resumo_cliente` **sem reformular** — ele já vem pronto com número do sinistro e orientações passo a passo\n  6. Depois disso, **fique disponível para dúvidas**, mas a condução do caso passa a ser humana\n\n  ### 6.3 Sensibilidade no Tom\n\n  * **Morte**: use \"senhor(a)\". Abra com pêsames curtos (\"Meus sentimentos\"). Evite jargão técnico\n  * **Doença grave / invalidez**: evite minimizar (\"vai ficar tudo bem\")\n  * **Roubo / acidente**: pergunte primeiro se está bem (fisicamente e emocionalmente)\n</fluxo-sinistro>\n\n# FERRAMENTAS\n\n<ferramentas>\n  > **IMPORTANTE**: as ferramentas recebem automaticamente do sistema os IDs técnicos (conta, conversa, inbox, tarefa, funil, telefone). Você **NÃO** precisa passar esses campos — só fornece os dados semânticos (CPF, valor, plano, motivo etc.).\n\n  ## Ferramentas de Venda\n\n  ### Cotar_vida\n\n  <ferramenta id=\"Cotar_vida\">\n    **Uso**: Cotar seguro de vida com as 3 seguradoras parceiras\n    **Quando**: Após confirmar todos os dados de qualificação com o cliente\n    **Parâmetros obrigatórios**:\n      * `cpf`: 11 dígitos (só números)\n      * `data_nascimento`: AAAA-MM-DD\n      * `sexo`: `m` ou `f`\n      * `fumante`: true/false\n      * `cep`: só números\n      * `beneficiarios`: array `[{nome, parentesco, percentual}]`, soma = 100\n      * `capital_morte`: valor em reais (ex: 500000)\n    **Parâmetros opcionais**:\n      * `profissao`, `capital_invalidez_acidente`, `capital_invalidez_doenca`, `capital_doencas_graves`, `auxilio_funeral`, `diaria_incapacidade`, `prazo`\n    **Retorno**: `{consentId, planos, resumo_cliente, validadeDias, disclaimer, original_quote_request}`\n    **Importante**: guarde `planos` para as etapas seguintes. Já salva `consent_id_cotacao`, `original_quote_request` e `idempotency_key` na tarefa automaticamente\n  </ferramenta>\n\n  ### Cotar_auto\n\n  <ferramenta id=\"Cotar_auto\">\n    **Uso**: Cotar seguro auto com as 3 seguradoras parceiras\n    **Quando**: Após confirmar os dados do veículo, condutor, localização e tipo de cobertura\n    **Parâmetros obrigatórios**:\n      * `placa`: placa do veículo (ex: ABC1D23)\n      * `ano_modelo`: 4 dígitos\n      * `condutor_cpf`: 11 dígitos\n      * `condutor_data_nascimento`: AAAA-MM-DD\n      * `condutor_sexo`: `m` ou `f`\n      * `cep`: CEP de pernoite/garagem (só números)\n      * `tipo_cobertura`: `compreensiva`, `rcf`, `app` ou `basica`\n    **Parâmetros opcionais**:\n      * `marca`, `modelo`, `combustivel` (default flex), `categoria` (default passeio), `chassi`\n      * `cnh_desde` (AAAA-MM-DD — ajuda na precificação), `estado_civil`, `uso_principal`\n      * `cidade`, `uso_comercial` (bool), `garagem` (bool)\n      * `franquia_perfil`: `reduzida`, `normal`, `ampliada`\n      * `rcf_materiais`, `rcf_corporais`, `app_capital`\n    **Retorno**: `{consentId, planos, resumo_cliente, validadeDias, disclaimer, original_quote_request}`\n    **Importante**: guarde `planos` para as etapas seguintes. Já salva `consent_id_cotacao`, `original_quote_request`, `idempotency_key` e `ramo=\"auto\"` na tarefa automaticamente\n  </ferramenta>\n\n  ### Enviar_proposta\n\n  <ferramenta id=\"Enviar_proposta\">\n    **Uso**: Gerar PDF com as 3 opções e enviar no WhatsApp\n    **Quando**: Depois de `Cotar_vida`, antes de pedir a escolha\n    **Parâmetros**:\n      * `cliente_nome` (nome real do cliente, não o do perfil do WhatsApp)\n      * `planos` (o array completo retornado por `Cotar_vida`)\n      * `disclaimer` (opcional, vindo de `Cotar_vida`)\n      * `mensagem_abertura` (opcional — texto que acompanha o PDF)\n  </ferramenta>\n\n  ### Gerar_pagamento\n\n  <ferramenta id=\"Gerar_pagamento\">\n    **Uso**: Criar cobrança PIX ou boleto para a mensalidade\n    **Quando**: Depois do cliente escolher o plano\n    **Parâmetros**:\n      * `valor`: o `premio.mensal` do plano escolhido\n      * `metodo`: `pix` ou `boleto`\n      * `descricao`: ex: \"Mensalidade Bradesco Viver Bem\"\n      * `nome_titular`: nome do pagador\n    **Retorno**: `{transactionId, instrucao_cliente, link_pagamento}`\n    **Importante**: envie `instrucao_cliente` **sem reformular** ao cliente — já vem pronto\n  </ferramenta>\n\n  ### Emitir_apolice\n\n  <ferramenta id=\"Emitir_apolice\">\n    **Uso**: Emitir a apólice após o pagamento\n    **Quando**: Cliente sinalizou pagamento\n    **Parâmetros**:\n      * `plan_id` OU `operadora_codigo` (ex: `BRD`, `ICA`, `MAG`)\n      * `payment_method`: `pix` ou `boleto`\n    **Retorno**: `{policyNumber, resumo_cliente, policyPdfUrl, startDate, endDate}`\n    **Importante**: a ferramenta lê automaticamente `consent_id_cotacao`, `original_quote_request`, `idempotency_key` e `payment_transaction_id` da tarefa\n  </ferramenta>\n\n  ### Buscar_apolices\n\n  <ferramenta id=\"Buscar_apolices\">\n    **Uso**: Consultar apólice(s) vinculada(s) à tarefa\n    **Quando**: Dúvidas sobre apólice existente, alteração, renovação\n  </ferramenta>\n\n  ## Ferramentas de Pós-Venda\n\n  ### Cancelar_apolice\n\n  <ferramenta id=\"Cancelar_apolice\">\n    **Uso**: Iniciar cancelamento de apólice ativa\n    **Parâmetros**: `motivo` (texto coletado com o cliente)\n    **Importante**: a ferramenta já escala para corretor humano. Você apenas avisa o cliente que registrou o pedido\n  </ferramenta>\n\n  ### Abrir_sinistro\n\n  <ferramenta id=\"Abrir_sinistro\">\n    **Uso**: Abrir sinistro e criar tarefa no funil Sinistros\n    **Parâmetros**:\n      * `tipo_sinistro`: uma palavra em minúsculas (`vazamento`, `colisao`, `morte`, `invalidez`, `doenca_grave`, `roubo`, `incendio`, `outros`)\n      * `descricao_cliente`: o que o cliente disse, textualmente\n    **Retorno**: `{numero_sinistro, resumo_cliente, escalado_para_humano}`\n    **Importante**: envie `resumo_cliente` **sem reformular**. A partir daí a condução é humana\n  </ferramenta>\n\n  ## Ferramentas de Gestão\n\n  ### Escalar_humano\n\n  <ferramenta id=\"Escalar_humano\">\n    **Uso imediato para**:\n      * Cliente pediu pra falar com uma pessoa ou corretor real\n      * Cliente pediu pra parar de mandar mensagens\n      * Reclamação formal ou insatisfação grave\n      * Questão fora do escopo (ramo não atendido por você, dúvida técnica profunda, disputa de sinistro)\n      * Situação suspeita (fraude, inconsistência grave nos dados)\n    **Parâmetros**:\n      * `motivo`: breve descrição do motivo\n      * `resumo_conversa`: pontos-chave do atendimento até aqui\n  </ferramenta>\n\n  ### Atualizar_tarefa\n\n  <ferramenta id=\"Atualizar_tarefa\">\n    **Uso**: Atualizar card no Kanban (etapa, título, descrição, data limite)\n    **Parâmetros**: `step_id`, `title`, `description`, `end_date`\n    **Regras**:\n      * Ao atualizar, **sempre inclua a descrição original** — nunca omita conteúdo anterior\n      * Use o **ID da etapa atual** caso não haja mudança de etapa\n      * IDs das etapas disponíveis via: `{{ $('Info').item.json.tarefa.board.steps.map(s => `${s.name}: ${s.id}`) }}`\n      * `end_date`: por padrão, agora + 1 dia (para follow-up). Em **Aprovada / Apólice Emitida sem pagamento**, use agora + 2 dias. Em **Assinada**, use a data de renovação (vigência fim) - 60 dias. Em **Renovação**, use a data de renovação\n  </ferramenta>\n\n  ### Refletir\n\n  <ferramenta id=\"Refletir\">\n    **Uso**: Antes de operações complexas — cotação, emissão, sinistro\n    **Situações**: validar dados, revisar cálculos, interpretar pedido ambíguo\n    **Custo**: zero — não altera o banco, só registra o raciocínio\n  </ferramenta>\n\n  ### Reagir_mensagem\n\n  <ferramenta id=\"Reagir_mensagem\">\n    **Uso**: Reagir com emoji a uma mensagem específica do cliente\n    **Emojis permitidos**: 😀 ❤️ 👍 👀 ✅\n    **Frequência**: máximo 3 por conversa. Use para confirmar que recebeu/entendeu uma informação\n  </ferramenta>\n</ferramentas>\n\n# KANBAN — GESTÃO DOS FUNIS\n\n<kanban>\n  ## Funil Principal — Moreira Seguros\n\n  | Etapa                 | Quando mover                                              |\n  |-----------------------|-----------------------------------------------------------|\n  | Novo Lead             | Card criado automaticamente no primeiro contato           |\n  | Cotação Solicitada    | `Cotar_vida` foi executada com sucesso (automático)       |\n  | Proposta Enviada      | `Enviar_proposta` foi executada (automático)              |\n  | Aprovada              | Cliente escolheu operadora (manual via `Atualizar_tarefa`)|\n  | Apólice Emitida       | `Emitir_apolice` foi executada (manual via `Atualizar_tarefa`) |\n  | Assinada              | Cliente confirmou recebimento, pagamento em dia           |\n  | Perdido               | Cliente desistiu, não respondeu follow-ups                |\n  | Renovação             | 60 dias antes do vencimento (via follow-up automático)    |\n\n  ## Funil Paralelo — Sinistros\n\n  | Etapa               | Quando mover                                      |\n  |---------------------|---------------------------------------------------|\n  | Aberto              | `Abrir_sinistro` foi executada (automático)       |\n  | Documentação        | Cliente começou a enviar documentos (manual)      |\n  | Em Análise          | Documentação completa, seguradora avaliando (manual) |\n  | Perícia / Vistoria  | Seguradora pediu perícia presencial (manual)      |\n  | Pago / Encerrado    | Indenização paga ou caso encerrado (manual)       |\n  | Negado              | Seguradora recusou (manual)                       |\n\n  ## Regras de Atualização da Tarefa\n\n  * Ao mover de etapa no funil principal, **sempre atualize o título** com `Vida - [Nome]` ou `[Operadora] - [Nome]` após escolha da operadora\n  * **A cada nova informação coletada na qualificação**, execute `Atualizar_tarefa` imediatamente — não espere acumular dados\n  * Se não houver informação nova mas houve mudança de etapa, atualize a tarefa com os mesmos valores atuais (título e descrição iguais aos existentes)\n  * **NUNCA omita a descrição original** ao atualizar — sempre preserve o conteúdo anterior\n  * Para sinistros, **NÃO mexa na tarefa do funil principal** — `Abrir_sinistro` cria uma tarefa paralela específica\n</kanban>\n\n# VALIDAÇÕES E REGRAS DE NEGÓCIO\n\n<validacoes>\n  1. **Dados para Cotação**\n     * CPF: 11 dígitos numéricos (não valide dígito verificador, só o tamanho)\n     * Data de nascimento: aceite qualquer formato que o cliente usar; internamente converta para `AAAA-MM-DD` antes de chamar a ferramenta\n     * Soma dos percentuais dos beneficiários: **deve ser exatamente 100**\n     * Capital de morte mínimo: **R$ 10.000** (rejeite valores menores e reeduque o cliente)\n     * Capital em múltiplos de R$ 100k facilita a negociação (orientação, não regra rígida)\n\n  2. **Preços e Condições**\n     * **NUNCA** invente preço, carência, cobertura, número de apólice, vigência. Tudo vem das ferramentas\n     * **NUNCA** prometa cobertura que não esteja na resposta da cotação\n     * **NUNCA** negocie valor — se o cliente insistir em desconto, use `Escalar_humano`\n\n  3. **Dados Sensíveis (LGPD)**\n     * **NUNCA** peça senha, cartão de crédito, foto de documento pelo chat\n     * Dados sensíveis pertinentes (CPF, DN, profissão) são coletados apenas para cotação\n     * Para confirmação de identidade, use só os últimos 4 dígitos do CPF\n\n  4. **Limites Operacionais**\n     * Até 3 recotações por atendimento. Depois disso, use `Escalar_humano`\n     * Memória de sessão existe (histórico dos últimos 50 turnos). **NÃO repita pergunta já respondida**\n\n  5. **Restrições de Escopo**\n     * **NUNCA** forneça diagnóstico médico ou orientação clínica\n     * **NUNCA** interprete exames\n     * **NUNCA** aceite agir em ramo diferente de vida sem antes escalar\n</validacoes>\n\n# EXEMPLOS DE FLUXO\n\n<exemplos>\n  **ATENÇÃO**: estes são exemplos ilustrativos. Sempre siga o SOP e adapte à conversa real. Não copie mensagens literais.\n\n  ## Exemplo 1: Cotação completa e venda\n\n  **Cliente**: Oi, queria cotar um seguro de vida\n  **André**: *[Atualizar_tarefa → etapa \"Cotação Solicitada\", descrição += \"Demonstrou interesse em Vida\", end_date = agora+1d]*\n  Olá! Sou o André, da Moreira Seguros. Claro, posso te ajudar. O seguro é pra você, pra família ou pra um casal?\n\n  **Cliente**: Pra mim mesmo\n  **André**: Perfeito. Pra começar, me passa seu CPF, por favor (só números).\n\n  **Cliente**: 12345678900\n  **André**: *[Atualizar_tarefa → descrição += \"CPF: 123.456.789-00\"]*\n  Obrigada! Qual sua data de nascimento?\n\n  *[André coleta DN, sexo, fumante, profissão, CEP, beneficiários, capital — um por mensagem, com `Atualizar_tarefa` a cada dado novo]*\n\n  **André**: Então confirmando: João Silva, nascido em 15/03/1985, não fumante, analista, CEP 01310-100, beneficiária Maria Silva (esposa, 100%), capital de R$ 500.000. Está certo?\n\n  **Cliente**: Sim\n  **André**: *[Refletir → dados completos para cotar]* *[Cotar_vida]*\n  Cotei com as 3 seguradoras. Vou te enviar um PDF com as opções comparadas lado a lado.\n\n  *[Enviar_proposta]*\n\n  Qual opção fez mais sentido pra você?\n\n  **Cliente**: Vou de Bradesco, a 1\n  **André**: *[Atualizar_tarefa → etapa \"Aprovada\", descrição += \"Operadora escolhida: BRD\"]*\n  Excelente escolha! Prefere pagar por *PIX* ou *boleto*?\n\n  **Cliente**: PIX\n  **André**: *[Gerar_pagamento]*\n  *[Envia instrucao_cliente sem reformular — contém PIX copia-e-cola]*\n\n  Assim que o pagamento cair, emito sua apólice.\n\n  **Cliente**: Pronto, paguei\n  **André**: *[Emitir_apolice]*\n  *[Envia resumo_cliente sem reformular — contém número da apólice, vigência, link do PDF]*\n  *[Atualizar_tarefa → etapa \"Apólice Emitida\", descrição += número da apólice + vigência + link]*\n\n  Sua apólice está ativa. Posso ajudar com mais alguma coisa?\n\n  ## Exemplo 2: Sinistro de morte\n\n  **Cliente**: Minha esposa faleceu semana passada\n  **André**: Meus sentimentos, senhor. Vou te guiar com calma.\n  *[Abrir_sinistro com tipo_sinistro=\"morte\", descricao_cliente=\"Minha esposa faleceu semana passada\"]*\n  *[Envia resumo_cliente sem reformular — já contém o número do sinistro e os documentos que a seguradora vai pedir]*\n\n  ## Exemplo 3: Pedido de desconto\n\n  **Cliente**: Não dá pra tirar uns 20% desse valor?\n  **André**: *[Escalar_humano com motivo=\"negociação de valor\"]*\n  Entendo. Pra conseguir condição fora da tabela, prefiro que um corretor humano olhe seu caso. Já avisei a equipe — alguém te responde aqui em breve.\n\n  ## Exemplo 4: Cliente volta após follow-up de renovação\n\n  **Cliente**: Recebi sua mensagem sobre renovação. Quero comparar com outras opções\n  **André**: Ótimo! *[Retorna ao fluxo de qualificação, aproveitando dados que já estão na tarefa]*\n  Já tenho aqui seus dados principais. Vamos atualizar só o que mudou? Sua profissão continua a mesma?\n</exemplos>\n\n# TRATAMENTO DE CASOS ESPECIAIS\n\n<casos-especiais>\n  ## Cliente Indeciso\n\n  * Não force a escolha. Pergunte o que está pesando: preço? cobertura? operadora?\n  * Se pedir mais tempo, `Atualizar_tarefa` com end_date = agora + 3 dias e uma mensagem de follow-up agendada\n\n  ## Múltiplas Pessoas no Mesmo Contato\n\n  * Se o contato mencionar cotar pra outra pessoa (esposo, filho, pai), pergunte: \"A cotação é pra você mesmo?\"\n  * Se for pra terceiro, avise que cada titular precisa ser cotado separadamente (em vida, cada CPF é uma apólice)\n\n  ## Horário Fora do Expediente\n\n  * André responde 24/7. **Não mencione horário comercial** a menos que o cliente pergunte diretamente\n  * Se o cliente quiser falar com corretor humano fora de horário, escale normalmente — o alerta fica para o próximo dia útil\n\n  ## Cliente Insatisfeito\n\n  1. Demonstre empatia e tente entender a causa\n  2. Se persistir ou for reclamação formal: `Escalar_humano` imediatamente\n\n  ## Recebimento de Arquivos\n\n  * Se o cliente enviar um arquivo (texto do tipo `<usuário enviou um arquivo do tipo xxx>`), avise que não consegue visualizar. Peça a informação por texto ou áudio\n  * Exceção: em sinistro, **não peça fotos por chat** — a ferramenta `Abrir_sinistro` já instrui o cliente sobre coleta de documentos\n\n  ## Dados Divergentes\n\n  * Se o cliente corrigir um dado (ex: \"errei o CEP, é 01311-100\"), atualize a tarefa e, se já cotou, recote com os novos dados\n\n  ## Cliente pede pra usar seguradora específica não listada\n\n  * Diga que atualmente trabalha com Bradesco, Icatu e MAG. Não prometa outras seguradoras. Se o cliente insistir, `Escalar_humano`\n</casos-especiais>\n\n# OBSERVAÇÕES FINAIS\n\n<observacoes-finais>\n  ## NUNCA ESQUEÇA\n\n  1. ⚠️ **NUNCA** invente preço, carência, cobertura, número de apólice ou qualquer dado que deveria vir de ferramenta\n  2. ⚠️ **NUNCA** prometa cobertura que não esteja na resposta da cotação\n  3. ⚠️ **NUNCA** negocie valor — use `Escalar_humano`\n  4. ⚠️ **NUNCA** peça senha, cartão de crédito ou foto de documento pelo chat\n  5. ⚠️ **NUNCA** forneça orientação médica ou interprete exames\n  6. ⚠️ **NUNCA** despeje múltiplas perguntas de uma vez\n  7. ⚠️ **NUNCA** chame o cliente pelo nome do perfil do WhatsApp — só use o nome que ele próprio informar\n  8. ⚠️ **NUNCA** aja em ramo diferente de vida sem escalar antes\n  9. ⚠️ **NUNCA** diga \"vou verificar\" ou \"vou consultar\" — use a ferramenta adequada ou escale\n  10. ⚠️ **NUNCA** reformule `resumo_cliente` ou `instrucao_cliente` retornados pelas ferramentas — envie exatamente como vieram\n  11. ⚠️ **NUNCA** mexa na tarefa do funil principal quando estiver tratando sinistro — sinistro tem tarefa própria no funil paralelo\n\n  ## SEMPRE LEMBRE\n\n  1. ✅ **SEMPRE** se apresente como André na primeira interação\n  2. ✅ **SEMPRE** confirme dados completos repetindo de volta antes de cotar\n  3. ✅ **SEMPRE** use `Atualizar_tarefa` a cada avanço ou novo dado coletado\n  4. ✅ **SEMPRE** trate sinistro como prioridade máxima\n  5. ✅ **SEMPRE** use `Refletir` em decisões complexas\n  6. ✅ **SEMPRE** acolha antes de operar (em sinistro, cancelamento, reclamação)\n  7. ✅ **SEMPRE** aponte o próximo passo ao fim da mensagem\n\n  ## LEMBRE-SE\n\n  * Você é o André, **não** uma IA ou assistente virtual. Nunca se refira a si mesmo como IA\n  * Cada interação impacta a reputação da Moreira Seguros e a relação de longo prazo com o cliente\n  * Clientes em sinistro podem estar fragilizados — sua calma é o que transmite segurança\n  * Seguro de vida é um ato de cuidado com quem a pessoa ama. Trate com a gravidade e o respeito que merece\n</observacoes-finais>\n\n# ESTADO ATUAL DA TAREFA\n\n<tarefa-atual>\n  Use estas informações para saber o estado atual do card deste cliente no Kanban. Ao chamar `Atualizar_tarefa`, use esses valores como base — preservando título e descrição existentes quando não houver informação nova a acrescentar.\n\n  * **Funil**: {{ $('Info').item.json.tarefa.board.name }}\n  * **Etapa atual**: {{ $('Info').item.json.tarefa.board_step.name }} (ID: {{ $('Info').item.json.tarefa.board_step_id }})\n  * **Título atual**: {{ $('Info').item.json.tarefa.title }}\n  * **Descrição atual**: {{ $('Info').item.json.tarefa.description || '(vazia)' }}\n  * **End Date atual**: {{ $('Info').item.json.tarefa.due_date || '(não definida)' }}\n  * **Atributos customizados**: {{ JSON.stringify($('Info').item.json.tarefa.custom_attributes || {}) }}\n\n  > **ATENÇÃO sobre o nome no título**: o nome que aparece no título da tarefa pode vir do perfil do WhatsApp do contato. **NÃO é garantido que seja o nome real da pessoa**. Use apenas o nome que o próprio cliente informar explicitamente durante a conversa.\n</tarefa-atual>\n\n# INFORMAÇÕES DO SISTEMA\n\n<informacoes-sistema>\n  **Data e Hora Atual**: {{ $now.format('ffff') }}\n</informacoes-sistema>\n",
+          "returnIntermediateSteps": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        7200,
+        496
+      ],
+      "id": "191f3ff4-32e1-47db-9978-a025533ec224",
+      "name": "Agente Corretor"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.2",
+          "mode": "list"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        6944,
+        736
+      ],
+      "id": "aad71179-9d5d-4306-ba8c-206c5e548208",
+      "name": "OpenAI",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Info').item.json.telefone }}",
+        "tableName": "n8n_historico_mensagens",
+        "contextWindowLength": 50
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        7072,
+        736
+      ],
+      "id": "c35a1c79-80b7-45c2-ade4-9575bf7483f3",
+      "name": "Memória",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "853c68fb-c9c6-4c09-8715-f8cf41edb77e",
+              "leftValue": "={{ $('Info').item.json.id_mensagem_referenciada }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        6512,
+        512
+      ],
+      "id": "c659fff8-ac98-4f9b-a5f0-2c335038ed44",
+      "name": "Resposta a outra mensagem?"
+    },
+    {
+      "parameters": {
+        "operation": "listMessages",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conta }}",
+          "mode": "id"
+        },
+        "inboxId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_inbox }}",
+          "mode": "id"
+        },
+        "conversationId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conversa }}",
+          "mode": "id"
+        },
+        "fetchAtLeast": 50,
+        "listMessagesOptions": {}
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        6752,
+        464
+      ],
+      "id": "d2ba3bf3-50e6-43dc-9e50-3af04e3386e5",
+      "name": "Buscar mensagem referenciada",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_historico_mensagens",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('Info').item.json.telefone }}",
+            "message": "={{\n  {\n    type: 'ai',\n    content: '<tool-calls>'\n      + $('Output válido?').item.json.intermediateSteps\n          .map(s => `<tool-call><action>${s.action.log}</action><result>${s.observation}</result></tool-call>`)\n          .join('')\n          .replaceAll('\"', \"'\")\n      + '</tool-calls>',\n    tool_calls: [],\n    additional_kwargs: {},\n    response_metadata: {},\n    invalid_tool_calls: []\n  }.toJsonString()\n}}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        8464,
+        464
+      ],
+      "id": "2261b30d-ce96-4aa8-8ca8-6f6d64c49601",
+      "name": "Salvar tool calls",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "063ab981-e52e-4779-9c1a-8d6dfa384643",
+              "leftValue": "={{ $('Output válido?').item.json.intermediateSteps }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        8224,
+        560
+      ],
+      "id": "0005d4a4-e8db-44eb-9fe5-f992bc7ad2f2",
+      "name": "Usou tools?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "93a1e408-265a-438d-b860-1ea7f6a79f93",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "e5ed93cc-0025-4858-a0e5-b621594b01de",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "Agent stopped due to max iterations.",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7536,
+        496
+      ],
+      "id": "76b9179a-644e-46e8-9a02-8efb85a28da7",
+      "name": "Output válido?"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_status_atendimento",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('Info').item.json.telefone }}",
+            "lock_conversa": false
+          },
+          "matchingColumns": [
+            "session_id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "lock_conversa",
+              "displayName": "lock_conversa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        7824,
+        512
+      ],
+      "id": "c4b7499e-6ebe-49be-9d05-97f91f0559e4",
+      "name": "Limpar status atendimento",
+      "alwaysOutputData": false,
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "90e45739-ca71-412c-83e5-789796d3de20",
+              "leftValue": "={{ $json }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        8000,
+        176
+      ],
+      "id": "9da6d5a0-dd6f-4fd9-924f-0333e5158b3c",
+      "name": "Recebeu mensagem enquanto respondia?",
+      "executeOnce": false,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_fila_mensagens",
+          "mode": "list"
+        },
+        "limit": 1,
+        "where": {
+          "values": [
+            {
+              "column": "telefone",
+              "value": "={{ $('Info').item.json.telefone }}"
+            }
+          ]
+        },
+        "sort": {
+          "values": [
+            {
+              "column": "id",
+              "direction": "DESC"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        7824,
+        176
+      ],
+      "id": "c91dfd9d-1dbb-4562-bf91-82505933d08c",
+      "name": "Buscar novas entradas na fila",
+      "alwaysOutputData": true,
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "063ab981-e52e-4779-9c1a-8d6dfa384643",
+              "leftValue": "={{ $('Output válido?').item.json.intermediateSteps }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        8560,
+        64
+      ],
+      "id": "88fd078b-87ac-4f61-b80b-a849f0a6726a",
+      "name": "Usou tools?1"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_historico_mensagens",
+          "mode": "list"
+        },
+        "limit": 1,
+        "where": {
+          "values": [
+            {
+              "column": "session_id",
+              "value": "={{ $('Info').item.json.telefone }}"
+            }
+          ]
+        },
+        "sort": {
+          "values": [
+            {
+              "column": "id",
+              "direction": "DESC"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        8224,
+        64
+      ],
+      "id": "de035803-9299-40c9-8279-2c5b198d5a12",
+      "name": "Buscar mensagens na memória",
+      "alwaysOutputData": false,
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "deleteTable",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_historico_mensagens",
+          "mode": "list"
+        },
+        "deleteCommand": "delete",
+        "where": {
+          "values": [
+            {
+              "column": "id",
+              "value": "={{ $('Buscar mensagens na memória').item.json.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        8400,
+        64
+      ],
+      "id": "61dc431f-fa0a-4ac4-8d71-2ca112287de5",
+      "name": "Deletar última mensagem da memória",
+      "executeOnce": false,
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_historico_mensagens",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('Info').item.json.telefone }}",
+            "message": "={{\n  {\n    type: 'ai',\n    content: '<tool-calls>'\n      + $('Output válido?').item.json.intermediateSteps\n          .map(s => `<tool-call><action>${s.action.log}</action><result>${s.observation}</result></tool-call>`)\n          .join('')\n          .replaceAll('\"', \"'\")\n      + '</tool-calls>',\n    tool_calls: [],\n    additional_kwargs: {},\n    response_metadata: {},\n    invalid_tool_calls: []\n  }.toJsonString()\n}}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        8784,
+        -16
+      ],
+      "id": "2da327fa-0682-48ce-ace1-54ccd88e540a",
+      "name": "Salvar tool calls3",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_status_atendimento",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('Info').item.json.telefone }}",
+            "lock_conversa": false
+          },
+          "matchingColumns": [
+            "session_id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "lock_conversa",
+              "displayName": "lock_conversa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        9024,
+        80
+      ],
+      "id": "51132be9-e955-4c25-acf2-ee9476796a3f",
+      "name": "Limpar status atendimento3",
+      "alwaysOutputData": false,
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "errorMessage": "=Problema no output do agente: {{ $('Output válido?').item.json.output }}"
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        8000,
+        512
+      ],
+      "id": "3b6ad51e-8a51-4496-a37a-ecebe7c465c8",
+      "name": "Output inválido"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Output válido?').item.json.output }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=# PAPEL\n\n<papel>\n  Você é um agente especialista em text-to-speech e formatação SSML. Sua missão é receber um texto e convertê-lo para o formato SSML, tornando-o mais natural e fluido no processo de geração de voz. Você transforma números, datas, telefones e endereços em suas formas faladas, remove elementos visuais incompatíveis com áudio e estrutura o texto dentro de tags SSML.\n</papel>\n\n# OBJETIVO\n\n<objetivo>\n  Receber um texto como entrada e retornar o mesmo conteúdo convertido em SSML, com:\n  1. Números, datas, telefones e endereços convertidos para forma falada natural\n  2. Emojis removidos\n  3. Vírgulas excessivas revisadas para fluidez na fala\n  4. Texto envolvido na tag `<speak>` com pausa inicial de 1.0s\n</objetivo>\n\n# REGRAS DE CONVERSÃO\n\n<regras-conversao>\n  ## Números de pedido, protocolos e códigos\n\n  Números longos (6 ou mais dígitos) que representam pedidos, protocolos, códigos de rastreio ou identificadores devem ser lidos dígito por dígito, agrupados em blocos de 3 dígitos separados por vírgula.\n\n  * Entrada: `pedido 187515955` → Saída: `pedido um oito sete, cinco um cinco, nove cinco cinco`\n  * Entrada: `protocolo 123456789` → Saída: `protocolo um dois três, quatro cinco seis, sete oito nove`\n  * Entrada: `código 45678` → Saída: `código quatro cinco seis sete oito`\n\n  ## Datas e horas\n\n  Converta datas e horas para um formato natural quando falado.\n\n  * Entrada: `10:00` → Saída: `dez horas`\n  * Entrada: `22:00` → Saída: `vinte e duas horas`\n  * Entrada: `14:30` → Saída: `quatorze e trinta`\n  * Entrada: `01/01/2025` → Saída: `primeiro de janeiro de 2025`\n\n  ## Telefones\n\n  Converta para formato falado natural. Para o DDD, converta sempre em dezena. Para os demais blocos, adicione pausas (vírgulas) entre cada grupo.\n\n  * Entrada: `(11) 1234-5678` → Saída: `onze, um dois três quatro, cinco seis sete oito`\n  * Entrada: `(11) 99999-9999` → Saída: `onze, nove nove nove nove nove, nove nove nove nove`\n\n  ## Endereços\n\n  Expanda abreviações e converta números de CEP para forma falada.\n\n  * Entrada: `Av. Rondon Pacheco` → Saída: `Avenida Rondon Pacheco`\n  * Entrada: `R. das Flores` → Saída: `Rua das Flores`\n  * Entrada: `CEP 12345-000` → Saída: `CEP um dois três quatro cinco zero zero zero`\n\n  ## Valores monetários\n\n  Converta valores para forma falada natural.\n\n  * Entrada: `R$ 500,00` → Saída: `quinhentos reais`\n  * Entrada: `R$ 1.250,50` → Saída: `mil duzentos e cinquenta reais e cinquenta centavos`\n</regras-conversao>\n\n# REGRAS GERAIS\n\n<regras-gerais>\n  * Sempre coloque uma pausa (`<break time=\"1.0s\"/>`) no começo, logo após a tag `<speak>`\n  * **NÃO** use breaks no meio do texto — apenas no começo\n  * Mantenha o conteúdo original do texto, apenas converta os formatos para forma falada\n  * Revise vírgulas excessivas para deixar o texto mais natural ao falar\n  * Remova todos os emojis\n  * Envolva toda a saída na tag `<speak>`\n  * **NUNCA** inclua caractere de nova linha `\\n` na saída — retorne tudo em uma única linha\n  * **NUNCA** envolva a saída em blocos de código (como ```ssml)\n</regras-gerais>\n\n# EXEMPLOS\n\n<exemplos>\n  **ATENÇÃO**: Estes são exemplos ilustrativos. Sempre siga as regras e adapte conforme necessário.\n\n  ## Exemplo 1: Mensagem com data, horário e endereço\n\n  **Entrada:**\n\n  Seu agendamento foi confirmado para 12/12/2025 às 09:00 com o Dr. Roberto Almeida. O endereço é Av. das Palmeiras, 1500.\n\n  **Saída esperada:**\n\n  `<speak><break time=\"1.0s\"/>Seu agendamento foi confirmado para doze de dezembro de 2025 às nove horas com o Doutor Roberto Almeida. O endereço é Avenida das Palmeiras, 1500.</speak>`\n\n  ---\n\n  ## Exemplo 2: Mensagem com telefone e valor\n\n  **Entrada:**\n\n  O valor da consulta é R$ 500,00. Para mais informações, ligue para (11) 4456-7890 📞\n\n  **Saída esperada:**\n\n  `<speak><break time=\"1.0s\"/>O valor da consulta é quinhentos reais. Para mais informações, ligue para onze, quatro quatro cinco seis, sete oito nove zero</speak>`\n\n  ---\n\n  ## Exemplo 3: Mensagem com protocolo\n\n  **Entrada:**\n\n  Seu protocolo de atendimento é 987654321. Guarde esse número! 😊\n\n  **Saída esperada:**\n\n  `<speak><break time=\"1.0s\"/>Seu protocolo de atendimento é nove oito sete, seis cinco quatro, três dois um. Guarde esse número!</speak>`\n</exemplos>\n\n# FORMATO DE RESPOSTA\n\n<formato-resposta>\n  Responda **apenas** com o texto convertido em SSML, sem introduções, explicações ou textos adicionais. A saída deve ser uma única linha contendo o texto dentro da tag `<speak>`.\n</formato-resposta>\n"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [
+        8912,
+        400
+      ],
+      "id": "ae30460f-62d2-4d06-9ad7-2868c69c3064",
+      "name": "Formatar SSML",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Output válido?').item.json.output }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=# PAPEL\n\n<papel>\n  Você é um agente especialista em pós-processamento de mensagens para WhatsApp. Sua missão é receber uma mensagem gerada por outro agente e realizar duas operações essenciais: **formatar o texto** para o padrão do WhatsApp e **dividir em múltiplas mensagens menores**, simulando o comportamento natural de um humano digitando e enviando aos poucos.\n</papel>\n\n# OBJETIVO\n\n<objetivo>\n  Receber uma mensagem longa como entrada e retornar o texto:\n  1. **Formatado** para WhatsApp (ajustando marcadores de negrito e removendo cabeçalhos Markdown)\n  2. **Dividido** em blocos menores separados por `\\n\\n`, como um humano faria ao enviar mensagens em sequência\n</objetivo>\n\n# REGRAS DE FORMATAÇÃO\n\n<regras-formatacao>\n  ### Substituições obrigatórias\n\n  * Substitua `**` por `*` (negrito Markdown → negrito WhatsApp)\n  * Remova todos os `#` de cabeçalhos Markdown\n\n  ### Preservação\n\n  * Não altere o conteúdo textual da mensagem\n  * Não reescreva frases, apenas formate\n  * Mantenha links, e-mails, telefones e valores monetários intactos\n</regras-formatacao>\n\n# REGRAS DE DIVISÃO\n\n<regras-divisao>\n  ## Princípios\n\n  * Divida a mensagem em blocos menores respeitando a pontuação e pausas naturais\n  * As divisões devem parecer naturais — como uma pessoa que digita e envia aos poucos\n  * Evite cortar frases no meio\n  * Mantenha a mesma ordem do texto original\n  * Remova vírgulas e pontos nos finais das mensagens, quando necessário\n  * Tente manter cada bloco entre 1 a 4 frases no máximo, se o texto permitir\n\n  ### Limites\n\n  * **NUNCA divida a mensagem em mais de 5 partes**\n  * **NUNCA quebre listas em múltiplas mensagens** — mantenha todos os itens de lista no mesmo bloco\n\n  ### Marcador de quebra\n\n  * Use `\\n\\n` (duas quebras de linha) para separar cada bloco de mensagem\n</regras-divisao>\n\n# EXEMPLOS\n\n<exemplos>\n  **ATENÇÃO**: Estes são exemplos ilustrativos. Sempre siga as regras e adapte conforme necessário.\n\n  ### Exemplo 1: Mensagem simples\n\n  **Entrada:**\n\n  Oi! Tudo bem por aí? Estava pensando em te mandar aquele documento ainda hoje, mas antes queria tirar umas dúvidas. Você pode me ligar assim que puder?\n\n  **Saída esperada:**\n\n  Oi! Tudo bem por aí?\n\n  Estava pensando em te mandar aquele documento ainda hoje, mas antes queria tirar umas dúvidas.\n\n  Você pode me ligar assim que puder?\n\n  ---\n\n  ### Exemplo 2: Mensagem com lista (NÃO QUEBRAR)\n\n  **Entrada:**\n\n  Oi! Seguem os documentos que você pediu:\n  1. Contrato assinado\n  2. Comprovante de pagamento\n  3. Nota fiscal\n  4. Certificado de conclusão\n  Me avisa quando receber tudo!\n\n  **Saída esperada:**\n\n  Oi! Seguem os documentos que você pediu:\n\n  1. Contrato assinado\n  2. Comprovante de pagamento\n  3. Nota fiscal\n  4. Certificado de conclusão\n\n  Me avisa quando receber tudo!\n\n  **❌ INCORRETO (não fazer):**\n\n  Oi! Seguem os documentos que você pediu:\n\n  1. Contrato assinado\n\n  2. Comprovante de pagamento\n\n  3. Nota fiscal\n\n  4. Certificado de conclusão\n\n  Me avisa quando receber tudo!\n\n  ---\n\n  ### Exemplo 3: Mensagem com formatação Markdown\n\n  **Entrada:**\n\n  Olá! Estou te mandando essa mensagem para explicar melhor o que aconteceu ontem. Eu cheguei lá por volta das **18h**, como combinado, mas não encontrei ninguém. Será que houve algum problema?\n\n  **Saída esperada:**\n\n  Olá! Estou te mandando essa mensagem para explicar melhor o que aconteceu ontem\n\n  Eu cheguei lá por volta das *18h*, como combinado, mas não encontrei ninguém\n\n  Será que houve algum problema?\n\n  ---\n\n  ### Exemplo 4: Mensagem com cabeçalho Markdown\n\n  **Entrada:**\n\n  ## Informações importantes\n  Seu agendamento foi confirmado para amanhã às 09:00 com o **Dr. Roberto Almeida**. O valor da consulta é **R$ 500,00**. Formas de pagamento: PIX, cartão ou dinheiro. Lembrando que nosso endereço é Av. das Palmeiras, 1500 - Jardim América.\n\n  **Saída esperada:**\n\n  Informações importantes\n\n  Seu agendamento foi confirmado para amanhã às 09:00 com o *Dr. Roberto Almeida*\n\n  O valor da consulta é *R$ 500,00*. Formas de pagamento: PIX, cartão ou dinheiro\n\n  Lembrando que nosso endereço é Av. das Palmeiras, 1500 - Jardim América\n</exemplos>\n\n# FORMATO DE RESPOSTA\n\n<formato-resposta>\n  Responda **apenas** com a mensagem formatada e dividida, sem introduções, explicações ou textos adicionais. Cada bloco de mensagem deve ser separado por `\\n\\n`.\n</formato-resposta>\n"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [
+        8896,
+        768
+      ],
+      "id": "8301af19-59e9-41ab-99b5-813ded59c6de",
+      "name": "Formatar texto",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        8912,
+        576
+      ],
+      "id": "d7c7a2aa-8819-4fcd-9d4c-c55b4f12b159",
+      "name": "OpenAI Chat Model1",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        8896,
+        928
+      ],
+      "id": "e081e056-6cf1-4f29-850c-61c5c2a6bad7",
+      "name": "OpenAI Chat Model2",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_status_atendimento",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('Info').item.json.telefone }}",
+            "lock_conversa": false
+          },
+          "matchingColumns": [
+            "session_id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "lock_conversa",
+              "displayName": "lock_conversa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        9920,
+        720
+      ],
+      "id": "fd1cce06-0ed1-4db9-b24d-081c288b0460",
+      "name": "Limpar status atendimento1",
+      "alwaysOutputData": false,
+      "executeOnce": true,
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "updatePresence",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conta }}",
+          "mode": "id"
+        },
+        "inboxId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_inbox }}",
+          "mode": "id"
+        },
+        "conversationId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conversa }}",
+          "mode": "id"
+        },
+        "typingStatus": "recording"
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        9232,
+        544
+      ],
+      "id": "5b9352ab-316e-4ffa-8895-aaf2b1d26ab8",
+      "name": "Gravando...",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "resource": "speech",
+        "voice": {
+          "__rl": true,
+          "value": "IKne3meq5aSn9XLyUdCD",
+          "mode": "list"
+        },
+        "text": "={{ $('Formatar SSML').item.json.text }}",
+        "additionalOptions": {
+          "model": {
+            "__rl": true,
+            "value": "eleven_flash_v2_5",
+            "mode": "list"
+          },
+          "outputFormat": "mp3_44100_32",
+          "languageCode": "pt-BR",
+          "voiceSettings": "{\n  \"stability\": 0.35,\n  \"similarity_boost\": 0.44,\n  \"speed\": 1.1\n}"
+        },
+        "requestOptions": {}
+      },
+      "type": "@elevenlabs/n8n-nodes-elevenlabs.elevenLabs",
+      "typeVersion": 1,
+      "position": [
+        9424,
+        544
+      ],
+      "id": "ad736845-3e9d-4dfa-8b5f-2153393f4ae3",
+      "name": "Gerar áudio",
+      "retryOnFail": true,
+      "credentials": {},
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "sendFile",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conta }}",
+          "mode": "id"
+        },
+        "inboxId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_inbox }}",
+          "mode": "id"
+        },
+        "conversationId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conversa }}",
+          "mode": "id"
+        },
+        "isRecordedAudio": true,
+        "sendFileOptions": {
+          "attachmentMetadata": "={{\n{\n  transcribed_text: $('Output válido?').item.json.output\n}.toJsonString()\n}}"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        9616,
+        544
+      ],
+      "id": "3108e817-e063-4830-a7be-3b1ae187edd5",
+      "name": "Enviar áudio",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conta }}",
+          "mode": "id"
+        },
+        "inboxId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_inbox }}",
+          "mode": "id"
+        },
+        "conversationId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conversa }}",
+          "mode": "id"
+        },
+        "content": "={{ $('Formatar texto').item.json.text }}",
+        "replyToMessageId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "additionalFields": {
+          "split_message": true,
+          "wait_before_sending": "dynamic"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        9296,
+        768
+      ],
+      "id": "b78297ee-46f6-4c90-a13e-05dd38e064b2",
+      "name": "Enviar texto",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "99afa8c2-1745-424a-80c6-7cd4ad852f62",
+              "leftValue": "={{ $('Info').item.json.mensagem_de_audio }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        8672,
+        576
+      ],
+      "id": "7e229421-6bdc-4d57-b961-fe14906c4ac9",
+      "name": "Áudio?"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Envia uma mensagem de reação como resposta a uma mensagem do usuário. Reação é sempre um emoji.\n\nIgnore a saída dessa ferramenta, ela é a mensagem enviada para o contato.\n\n**NUNCA UTILIZE ESSA FERRAMENTA MÚLTIPLAS VEZES SEGUIDAS**",
+        "operation": "sendMessage",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conta }}",
+          "mode": "id"
+        },
+        "inboxId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_inbox }}",
+          "mode": "id"
+        },
+        "conversationId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conversa }}",
+          "mode": "id"
+        },
+        "content": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Content', ``, 'string') }}",
+        "replyToMessageId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_mensagem }}",
+          "mode": "id"
+        },
+        "additionalFields": {
+          "is_reaction": true
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwootTool",
+      "typeVersion": 1,
+      "position": [
+        7872,
+        736
+      ],
+      "id": "044fe3c5-995c-4e1c-8dfb-05ae0e9d0d5a",
+      "name": "Reagir mensagem",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "=Use essa ferramenta para atualizar a tarefa.\n\n### IDs etapas\n\n{{ $('Info').item.json.tarefa.board.steps.map(s => `${s.name}: ${s.id}`) }}\n\n**USAR ID DA ETAPA ATUAL CASO NÃO HAJA ATUALIZAÇÃO NA ETAPA**\n\n### Descrição\n\nAo adicionar informações na descrição, sempre inclua a descrição original. NUNCA omita a descrição original, a não ser que o objetivo seja remover a informação.",
+        "resource": "kanbanTask",
+        "operation": "update",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.id_conta }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.tarefa.board.id }}",
+          "mode": "id"
+        },
+        "kanbanTaskId": {
+          "__rl": true,
+          "value": "={{ $('Info').item.json.tarefa.id }}",
+          "mode": "id"
+        },
+        "updateFields": {
+          "title": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Title', ``, 'string') }}",
+          "description": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Description', ``, 'string') }}",
+          "board_step_id": {
+            "mode": "list",
+            "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Kanban_Step', ``, 'string') }}"
+          },
+          "due_date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End_Date', `Data limite da tarefa no formato ISO 8601 com fuso horário (ex: 2026-02-10T18:00:00-03:00). Para agendamentos, use a véspera da consulta (data do agendamento − 1 dia). Nos demais casos, use a data atual + 1 dia para indicar quando deverá ser feito o follow-up caso o lead pare de responder.`, 'string') }}"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwootTool",
+      "typeVersion": 1,
+      "position": [
+        7712,
+        736
+      ],
+      "id": "9fa6ea9a-bff5-43b3-a0dd-79068f24967e",
+      "name": "Atualizar tarefa",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "accountId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "<SELECIONE SUA CONTA>"
+        },
+        "events": [
+          "message_incoming"
+        ],
+        "inboxId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "<SELECIONE SUA INBOX>"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwootTrigger",
+      "typeVersion": 1,
+      "position": [
+        2336,
+        656
+      ],
+      "id": "9bbfa001-93a1-4841-94c2-fc82626717ec",
+      "name": "Gatilho WhatsApp",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "content": "## Quer entender como funciona?\n\n\n### Assista o vídeo, deixe um like, e se inscreva no canal para ter acesso a mais workflows como esse!\n\n[![Vídeo YouTube Kanban Clínicas](https://i1.ytimg.com/vi_webp/vYtaGw3vRII/maxresdefault.webp)](https://www.youtube.com/watch?v=vYtaGw3vRII)",
+        "height": 472,
+        "width": 596,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2400,
+        -736
+      ],
+      "id": "a13f9434-5790-4bb5-91f4-be3c1899d53c",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "## [Clique aqui e entre agora para tirar suas dúvidas](https://lucasmoreira.ai)\n[![Banner comunidade](https://assets-v2.circle.so/voccie8o44ecsfpx7p8z1j9rze82)](https://lucasmoreira.ai)",
+        "height": 472,
+        "width": 1124,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3008,
+        -736
+      ],
+      "id": "9a4fbfb5-3362-4270-8a9c-c933a8af21e0",
+      "name": "Sticky Note36"
+    },
+    {
+      "parameters": {
+        "content": "## Usei Hostinger pra este workflow.\n## Replique aqui.\n\n\n\n\n\n\n\n\n\n## [Use o cupom `FAZERAI` pra ter 10% de desconto na sua primeira compra!](https://www.hostg.xyz/SHJIm)",
+        "height": 348,
+        "width": 552,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1840,
+        -256
+      ],
+      "id": "1ca9945b-c388-4b7a-aef2-11c39cd3ac1e",
+      "name": "Sticky Note21"
+    },
+    {
+      "parameters": {
+        "content": "[![Hostinger](https://framerusercontent.com/images/ptGVDA4KqG8GLNlWRDzFxaM.png?width=600&height=119)](https://www.hostg.xyz/SHJIm)\n",
+        "height": 96,
+        "width": 324,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1952,
+        -144
+      ],
+      "id": "f58b9b96-abfa-4713-812d-5e7df3c162cb",
+      "name": "Sticky Note29"
+    },
+    {
+      "parameters": {
+        "content": "[![fazer.ai](https://framerusercontent.com/images/HqY9djLTzyutSKnuLLqBr92KbM.png?scale-down-to=256)](https://fazer.ai?utm_source=n8n&utm_campaign=sec-v3)\n\n## Esse é um template faça você mesmo do canal\n## Lucas Moreira\n\n### Inscreva-se no nosso canal no YouTube\n[![YouTube Lucas Moreira](https://img.shields.io/youtube/channel/subscribers/UCtmp6SxzLscu0GRTbgM8FTw?style=flat-square&logo=youtube&label=Inscreva-se&color=f00)](https://youtube.com/@eulucassmoreira?si=0lH7hwX9pukjhmPQ)\n[![Instagram](https://img.shields.io/badge/instagram-black?logo=instagram&style=for-the-badge)](https://instagram.com/eulucassmoreira)\n[![GitHub fazer.ai](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white&label)](https://github.com/fazer-ai)\n",
+        "height": 472,
+        "width": 550,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1840,
+        -736
+      ],
+      "id": "5e1a1654-0232-427f-bf2c-8ecfea229c22",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "## Fila de mensagens - Usuário",
+        "height": 672,
+        "width": 976,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        5280,
+        368
+      ],
+      "id": "30c906dc-2834-4c11-baad-8c48bde6e5a2",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "## Agente",
+        "height": 800,
+        "width": 1248
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        6912,
+        368
+      ],
+      "id": "e179ef77-663d-4d0a-bc2d-6c9bd7c0f287",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "content": "## Formatar e enviar",
+        "height": 672,
+        "width": 1520,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        8608,
+        368
+      ],
+      "id": "366d0aa8-46d2-45b2-87e5-a54014369df4",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "content": "# Checklist\n- [ ] Configurar node Info\n- [ ] Credenciais: OpenAI, Chatwoot, Postgres, ElevenLabs\n- [ ] Conectar subworkflows 02 a 07\n- [ ] Ajustar System Prompt",
+        "height": 192,
+        "width": 448,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2416,
+        -240
+      ],
+      "id": "c8c3c1a1-ac42-4d31-8d61-2545106afa57",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "content": "## Descartar mensagem do agente\n\nSe o usuário enviar uma mensagem enquanto o agente estava processando a mensagem anterior, o workflow irá descartar a mensagem do agente.\n\nIsso melhora situações em que o usuário mandou uma nova mensagem, mas o agente ainda tenta responder a mensagem anterior do usuário, sem o contexto da nova mensagem.\n",
+        "height": 512,
+        "width": 1440,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        7744,
+        -160
+      ],
+      "typeVersion": 1,
+      "id": "6008bac4-6c57-40fe-ae7d-3d053c98b663",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Salvar chamadas de ferramenta",
+        "height": 384,
+        "width": 416,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        8176,
+        368
+      ],
+      "typeVersion": 1,
+      "id": "acc3cbb8-baf9-44b2-8e24-b19f4331e968",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Pré-processamento de mensagens",
+        "height": 672,
+        "width": 3024,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2240,
+        368
+      ],
+      "typeVersion": 1,
+      "id": "2fe3512c-9c37-45c9-a5a5-150a44cb0e9b",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "### Marcar como lida e Reply do WhatsApp",
+        "height": 352,
+        "width": 624,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        6272,
+        368
+      ],
+      "typeVersion": 1,
+      "id": "26760d0b-c4c9-44e0-8ab6-b4bc04a2f3bd",
+      "name": "Sticky Note14"
+    },
+    {
+      "parameters": {
+        "content": "### Fallback de texto\n\nSe acabar os créditos na ElevenLabs, ou der algum erro, a mensagem é enviada como texto.",
+        "width": 256,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        9344,
+        416
+      ],
+      "typeVersion": 1,
+      "id": "a107c231-d713-466f-a70a-24d23a9faef5",
+      "name": "Sticky Note15"
+    },
+    {
+      "parameters": {
+        "content": "[![ElevenLabs](https://framerusercontent.com/images/YU6MnXR7ZjWNRjlYzx2Hrpcx0.png)](n8n-kanban-seguros)",
+        "height": 80,
+        "width": 160,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        9648,
+        192
+      ],
+      "id": "98d9ce9c-c68d-4229-9bf6-73a5c2c558eb",
+      "name": "Sticky Note28"
+    },
+    {
+      "parameters": {
+        "content": "# Checklist - ElevenLabs\n\n[Clique aqui para criar sua conta gratuita no ElevenLabs](n8n-kanban-seguros)\n\n- [ ] Acessar biblioteca de vozes e escolher uma voz. Recomendamos usar o [Adam Stone](https://elevenlabs.io/app/voice-library?voiceId=IKne3meq5aSn9XLyUdCD) (ou outra voz masculina de sua preferência)\n- [ ] Clicar no \"+\" (\"Add to my voices\") e clicar no novo botão que irá surgir (\"Use voice\")\n- [ ] Caso ainda não tenha feito, buscar e instalar node `ElevenLabs` (atualizar a página pra aparecer o node)\n- [ ] Ajustar características da voz no node \"Gerar áudio\". Valores padrão configurados para testar pelo dashboard do ElevenLabs:\n\n- **Model**: Eleven Flash v2.5\n- **Speed**: 1.10\n- **Stability**: 35%\n- **Similarity**: 44%\n\n- [ ] Criar credencial -> https://elevenlabs.io/app/developers/api-keys (marcar opções `Text to Speech: Access`, `Voices: Read`, `Models: Read`)",
+        "height": 384,
+        "width": 656,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        9200,
+        -32
+      ],
+      "id": "73970867-73fc-4725-a98b-683721949154",
+      "name": "Sticky Note24"
+    },
+    {
+      "parameters": {
+        "jsCode": "const info = $('Info').first().json;\nconst board = info.funil;\nconst task = info.tarefa;\n\n// Sem task no Kanban? Reset só de memória, pula task move/clear.\nif (!task?.id || !board?.steps?.length) {\n  return [];\n}\n\n// /reset só mexe no funil Corretora. NUNCA resetar tarefas de Sinistros\n// (sinistro tem lifecycle próprio e ficou ligado à conversa por conversation_ids).\nif (String(board.name || '').toLowerCase() === 'sinistros') {\n  return [];\n}\n\n// O payload já vem de ordered_steps — primeiro item = primeiro step do funil.\nconst firstStep = board.steps[0];\n\nreturn [{\n  json: {\n    account_id: info.id_conta,\n    task_id: task.id,\n    step_id: firstStep.id,\n    board_id: board.id,\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3552,
+        -160
+      ],
+      "id": "reset-prep-0001-0002-0003-000000000001",
+      "name": "Preparar reset task"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanTask",
+        "operation": "update",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $json.account_id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $json.board_id }}",
+          "mode": "id"
+        },
+        "kanbanTaskId": {
+          "__rl": true,
+          "value": "={{ $json.task_id }}",
+          "mode": "id"
+        },
+        "specifyCustomAttributesUpdate": "keypair",
+        "customAttributesParametersUpdate": {
+          "attributes": [
+            {
+              "name": "consent_id_cotacao"
+            },
+            {
+              "name": "ramo"
+            },
+            {
+              "name": "plano_escolhido"
+            },
+            {
+              "name": "operadora"
+            },
+            {
+              "name": "operadora_codigo"
+            },
+            {
+              "name": "capital_morte"
+            },
+            {
+              "name": "premio_mensal"
+            },
+            {
+              "name": "fumante"
+            },
+            {
+              "name": "beneficiarios_resumo"
+            },
+            {
+              "name": "numero_apolice"
+            },
+            {
+              "name": "data_vigencia"
+            },
+            {
+              "name": "data_renovacao"
+            },
+            {
+              "name": "numero_sinistro"
+            },
+            {
+              "name": "tipo_sinistro"
+            },
+            {
+              "name": "original_quote_request"
+            },
+            {
+              "name": "idempotency_key"
+            },
+            {
+              "name": "payment_transaction_id"
+            }
+          ]
+        },
+        "updateFields": {
+          "board_step_id": {
+            "__rl": true,
+            "value": "={{ $json.step_id }}",
+            "mode": "id"
+          }
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        3728,
+        -160
+      ],
+      "id": "reset-task-0001-0002-0003-000000000002",
+      "name": "Resetar task",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "description": "Gera cobrança PIX ou boleto da mensalidade do plano escolhido. Retorna transactionId (GUARDAR) e instrucao_cliente (ENVIAR).",
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "<selecionar workflow 09. Pagamento>"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "account_id": "={{ $('Info').item.json.id_conta }}",
+            "conversation_id": "={{ $('Info').item.json.id_conversa }}",
+            "task_id": "={{ $('Info').item.json.tarefa.id }}",
+            "valor": "={{ $fromAI('valor', 'Valor em reais (ex: 389.90) — use premio.mensal do plano escolhido', 'number', 0) }}",
+            "metodo": "={{ $fromAI('metodo', 'pix ou boleto', 'string', '') }}",
+            "descricao": "={{ $fromAI('descricao', 'Descrição da cobrança', 'string', '') }}",
+            "nome_titular": "={{ $fromAI('nome_titular', 'Nome do titular', 'string', '') }}",
+            "board_id": "={{ $('Info').item.json.funil.id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "account_id",
+              "displayName": "account_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "conversation_id",
+              "displayName": "conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "task_id",
+              "displayName": "task_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "valor",
+              "displayName": "valor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "metodo",
+              "displayName": "metodo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "descricao",
+              "displayName": "descricao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "nome_titular",
+              "displayName": "nome_titular",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "board_id",
+              "displayName": "board_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        7504,
+        880
+      ],
+      "id": "c76c6179-1298-4524-9bc9-c2bc0636a22d",
+      "name": "09. Gerar pagamento"
+    },
+    {
+      "parameters": {
+        "description": "Cota seguro de vida na seguradora. Retorna 3 opções de plano, o consentId e o original_quote_request (precisam ser guardados na descrição da tarefa para usar na emissão).",
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "<selecionar workflow 02. 1 Cotar Vida>"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "account_id": "={{ $('Info').item.json.id_conta }}",
+            "conversation_id": "={{ $('Info').item.json.id_conversa }}",
+            "task_id": "={{ $('Info').item.json.tarefa.id }}",
+            "cpf": "={{ $fromAI('cpf', 'CPF do titular (apenas números, 11 dígitos)', 'string', '') }}",
+            "data_nascimento": "={{ $fromAI('data_nascimento', 'Data de nascimento AAAA-MM-DD', 'string', '') }}",
+            "sexo": "={{ $fromAI('sexo', 'Sexo do segurado: m ou f', 'string', '') }}",
+            "fumante": "={{ $fromAI('fumante', 'Informou ser fumante? true/false', 'boolean', false) }}",
+            "profissao": "={{ $fromAI('profissao', 'Profissão do titular (ex: analista, motoboy, professor)', 'string', 'outros') }}",
+            "cep": "={{ $fromAI('cep', 'CEP (só números)', 'string', '') }}",
+            "beneficiarios": "={{ $fromAI('beneficiarios', 'Array de beneficiários: [{nome, parentesco, percentual}]. Soma dos percentuais = 100.', 'json', []) }}",
+            "capital_morte": "={{ $fromAI('capital_morte', 'Capital segurado para morte em reais (ex: 500000)', 'number', 0) }}",
+            "capital_invalidez_acidente": "={{ $fromAI('capital_invalidez_acidente', 'Capital para invalidez por acidente (opcional, em reais)', 'number', 0) }}",
+            "capital_invalidez_doenca": "={{ $fromAI('capital_invalidez_doenca', 'Capital para invalidez por doença (opcional)', 'number', 0) }}",
+            "capital_doencas_graves": "={{ $fromAI('capital_doencas_graves', 'Capital para doenças graves (opcional)', 'number', 0) }}",
+            "auxilio_funeral": "={{ $fromAI('auxilio_funeral', 'Capital para auxílio funeral (opcional, ex: 10000)', 'number', 0) }}",
+            "diaria_incapacidade": "={{ $fromAI('diaria_incapacidade', 'Valor da diária de incapacidade temporária (opcional)', 'number', 0) }}",
+            "prazo": "={{ $fromAI('prazo', 'Prazo do seguro (default: anualRenovavel)', 'string', 'anualRenovavel') }}",
+            "board_id": "={{ $('Info').item.json.funil.id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "account_id",
+              "displayName": "account_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "conversation_id",
+              "displayName": "conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "task_id",
+              "displayName": "task_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "board_id",
+              "displayName": "board_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "cpf",
+              "displayName": "cpf",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "data_nascimento",
+              "displayName": "data_nascimento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "sexo",
+              "displayName": "sexo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "fumante",
+              "displayName": "fumante",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "boolean"
+            },
+            {
+              "id": "profissao",
+              "displayName": "profissao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "cep",
+              "displayName": "cep",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "beneficiarios",
+              "displayName": "beneficiarios",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "array"
+            },
+            {
+              "id": "capital_morte",
+              "displayName": "capital_morte",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "capital_invalidez_acidente",
+              "displayName": "capital_invalidez_acidente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "capital_invalidez_doenca",
+              "displayName": "capital_invalidez_doenca",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "capital_doencas_graves",
+              "displayName": "capital_doencas_graves",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "auxilio_funeral",
+              "displayName": "auxilio_funeral",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "diaria_incapacidade",
+              "displayName": "diaria_incapacidade",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "prazo",
+              "displayName": "prazo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        7248,
+        752
+      ],
+      "id": "9fdceb97-8733-431d-a87f-fc6c9104ae49",
+      "name": "02. Cotar vida"
+    },
+    {
+      "parameters": {
+        "description": "Emite a apólice de vida após pagamento confirmado. Lê automaticamente da tarefa: consent_id, original_quote_request, idempotency_key e payment_transaction_id. O agente só passa o plano escolhido e o método de pagamento.",
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "<selecionar workflow 05. Emitir Apólice>"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "account_id": "={{ $('Info').item.json.id_conta }}",
+            "conversation_id": "={{ $('Info').item.json.id_conversa }}",
+            "task_id": "={{ $('Info').item.json.tarefa.id }}",
+            "plan_id": "={{ $fromAI('plan_id', 'planId do plano escolhido (ex: ICA-f9b381). Opcional se passar operadora_codigo.', 'string', '') }}",
+            "operadora_codigo": "={{ $fromAI('operadora_codigo', 'Código de 3 letras: BRD, ICA ou MAG. Pode vir do atributo operadora_codigo da tarefa.', 'string', '') }}",
+            "payment_method": "={{ $fromAI('payment_method', 'pix ou boleto (como o cliente pagou)', 'string', '') }}",
+            "board_id": "={{ $('Info').item.json.funil.id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "account_id",
+              "displayName": "account_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "conversation_id",
+              "displayName": "conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "task_id",
+              "displayName": "task_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "plan_id",
+              "displayName": "plan_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "operadora_codigo",
+              "displayName": "operadora_codigo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "payment_method",
+              "displayName": "payment_method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "board_id",
+              "displayName": "board_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        7248,
+        880
+      ],
+      "id": "cab29050-6264-4dc8-ac1d-11772f2379ce",
+      "name": "05. Emitir apolice"
+    },
+    {
+      "parameters": {
+        "description": "Gera o PDF da proposta (com as 3 opções comparadas) e envia pelo Chatwoot. Recebe a lista completa de planos retornada por Cotar_vida.",
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "<selecionar workflow 03. Enviar Proposta>"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "account_id": "={{ $('Info').item.json.id_conta }}",
+            "inbox_id": "={{ $('Info').item.json.id_inbox }}",
+            "conversation_id": "={{ $('Info').item.json.id_conversa }}",
+            "task_id": "={{ $('Info').item.json.tarefa.id }}",
+            "cliente_nome": "={{ $fromAI('cliente_nome', 'Nome do cliente', 'string', 'Cliente') }}",
+            "planos": "={{ $fromAI('planos', 'Array completo de planos retornado por Cotar_vida', 'json', []) }}",
+            "disclaimer": "={{ $fromAI('disclaimer', 'Disclaimer retornado por Cotar_vida (opcional)', 'string', '') }}",
+            "mensagem_abertura": "={{ $fromAI('mensagem_abertura', 'Mensagem de abertura que acompanha o PDF (opcional)', 'string', '') }}",
+            "board_id": "={{ $('Info').item.json.funil.id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "account_id",
+              "displayName": "account_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "inbox_id",
+              "displayName": "inbox_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "conversation_id",
+              "displayName": "conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "task_id",
+              "displayName": "task_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "board_id",
+              "displayName": "board_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "cliente_nome",
+              "displayName": "cliente_nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "planos",
+              "displayName": "planos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "array"
+            },
+            {
+              "id": "disclaimer",
+              "displayName": "disclaimer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "mensagem_abertura",
+              "displayName": "mensagem_abertura",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        7376,
+        736
+      ],
+      "id": "0d88d789-18f1-4235-b48a-903689a03c21",
+      "name": "03. Enviar proposta"
+    },
+    {
+      "parameters": {
+        "description": "Inicia cancelamento de apólice ativa: registra o pedido na tarefa (com motivo) e escala para um corretor humano validar as condições de cancelamento com a operadora.",
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "<selecionar workflow 06. Cancelar Apólice>"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "account_id": "={{ $('Info').item.json.id_conta }}",
+            "conversation_id": "={{ $('Info').item.json.id_conversa }}",
+            "inbox_id": "={{ $('Info').item.json.id_inbox }}",
+            "task_id": "={{ $('Info').item.json.tarefa.id }}",
+            "motivo": "={{ $fromAI('motivo', 'Motivo alegado pelo cliente (ex: achou mais barato, mudou de plano da empresa, etc)', 'string', '') }}",
+            "nome": "={{ $('Info').item.json.nome }}",
+            "telefone": "={{ $('Info').item.json.telefone }}",
+            "alerta_conversation_id": "={{ $('Info').item.json.alerta_conversation_id }}",
+            "alerta_inbox_id": "={{ $('Info').item.json.alerta_inbox_id }}",
+            "board_id": "={{ $('Info').item.json.funil.id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "account_id",
+              "displayName": "account_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "conversation_id",
+              "displayName": "conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "inbox_id",
+              "displayName": "inbox_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "task_id",
+              "displayName": "task_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "motivo",
+              "displayName": "motivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "nome",
+              "displayName": "nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "alerta_conversation_id",
+              "displayName": "alerta_conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "alerta_inbox_id",
+              "displayName": "alerta_inbox_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "board_id",
+              "displayName": "board_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        7376,
+        848
+      ],
+      "id": "7144eec8-e422-49ca-a76a-701ed1d3b484",
+      "name": "06. Cancelar apolice"
+    },
+    {
+      "parameters": {
+        "description": "Abre um sinistro quando o cliente aciona o seguro (acidente, vazamento, morte, invalidez, colisão, doença grave, roubo, etc). Cria tarefa no funil paralelo de Sinistros, gera orientações imediatas e escala para corretor humano. Use SEMPRE antes de tentar resolver o sinistro.",
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "<selecionar workflow 10. Abrir Sinistro>"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "account_id": "={{ $('Info').item.json.id_conta }}",
+            "conversation_id": "={{ $('Info').item.json.id_conversa }}",
+            "inbox_id": "={{ $('Info').item.json.id_inbox }}",
+            "tipo_sinistro": "={{ $fromAI('tipo_sinistro', 'Uma palavra em minúsculas: vazamento, colisao, morte, invalidez, doenca_grave, roubo, incendio, outros', 'string', '') }}",
+            "descricao_cliente": "={{ $fromAI('descricao_cliente', 'O que o cliente disse, textualmente — ajuda o corretor humano a entender o caso', 'string', '') }}",
+            "nome": "={{ $('Info').item.json.nome }}",
+            "telefone": "={{ $('Info').item.json.telefone }}",
+            "alerta_conversation_id": "={{ $('Info').item.json.alerta_conversation_id }}",
+            "alerta_inbox_id": "={{ $('Info').item.json.alerta_inbox_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "account_id",
+              "displayName": "account_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "conversation_id",
+              "displayName": "conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "inbox_id",
+              "displayName": "inbox_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "tipo_sinistro",
+              "displayName": "tipo_sinistro",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "descricao_cliente",
+              "displayName": "descricao_cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "nome",
+              "displayName": "nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "alerta_conversation_id",
+              "displayName": "alerta_conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "alerta_inbox_id",
+              "displayName": "alerta_inbox_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        7376,
+        992
+      ],
+      "id": "549f1c95-4f92-4fd0-b904-1ce31d630ddd",
+      "name": "10. Abrir sinistro"
+    },
+    {
+      "parameters": {
+        "description": "Busca as informações da apólice vinculada à tarefa atual do Kanban. Retorna número, operadora, plano, vigência, data de renovação e status (ativa / vencida). Use quando o cliente perguntar sobre sua apólice.",
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "<selecionar workflow 04. Buscar Apólices>"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "account_id": "={{ $('Info').item.json.id_conta }}",
+            "task_id": "={{ $('Info').item.json.tarefa.id }}",
+            "board_id": "={{ $('Info').item.json.funil.id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "account_id",
+              "displayName": "account_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "task_id",
+              "displayName": "task_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "board_id",
+              "displayName": "board_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        7504,
+        752
+      ],
+      "id": "17ee2937-77b7-49d5-9257-e9cb95cf978c",
+      "name": "04. Buscar apolices"
+    },
+    {
+      "parameters": {
+        "description": "Puxa um corretor humano quando o caso foge do escopo do agente (cancelamento, sinistro, reclamação, pedido explícito).",
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "<selecionar workflow 07. Escalar Humano>"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telefone": "={{ $('Info').item.json.telefone }}",
+            "nome": "={{ $('Info').item.json.nome }}",
+            "motivo": "={{ $fromAI(\"motivo\", \"Breve descrição do motivo da escalação (ex: cancelamento, sinistro, reclamação, pedido explícito de humano).\", \"string\", '') }}",
+            "ultima_mensagem": "={{ $('Coletar mensagens').item.json.mensagem }}",
+            "resumo_conversa": "={{ $fromAI(\"resumo_conversa\", \"Um breve resumo com pontos chave da conversa.\", \"string\", '') }}",
+            "account_id": "={{ $('Info').item.json.id_conta }}",
+            "conversation_id": "={{ $('Info').item.json.id_conversa }}",
+            "inbox_id": "={{ $('Info').item.json.id_inbox }}",
+            "alerta_conversation_id": "={{ $('Info').item.json.alerta_conversation_id }}",
+            "alerta_inbox_id": "={{ $('Info').item.json.alerta_inbox_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "nome",
+              "displayName": "nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "motivo",
+              "displayName": "motivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "ultima_mensagem",
+              "displayName": "ultima_mensagem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "resumo_conversa",
+              "displayName": "resumo_conversa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "account_id",
+              "displayName": "account_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "conversation_id",
+              "displayName": "conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "inbox_id",
+              "displayName": "inbox_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "alerta_conversation_id",
+              "displayName": "alerta_conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "alerta_inbox_id",
+              "displayName": "alerta_inbox_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        8032,
+        736
+      ],
+      "id": "19f72e18-abb5-46f8-adac-241821ae59a8",
+      "name": "07. Escalar humano"
+    },
+    {
+      "parameters": {
+        "content": "### Habilite esse node só depois de terminar de testar!",
+        "height": 256,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        5856,
+        672
+      ],
+      "typeVersion": 1,
+      "id": "2578b34e-4367-432b-9620-ba4d3903f202",
+      "name": "Sticky Note16"
+    },
+    {
+      "parameters": {
+        "description": "Cota seguro de auto na seguradora. Retorna 3 opções de plano, o consentId e o original_quote_request (precisam ser guardados na descrição da tarefa para usar na emissão).",
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "<selecionar workflow 02. 2 Cotar Auto>"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "account_id": "={{ $('Info').item.json.id_conta }}",
+            "conversation_id": "={{ $('Info').item.json.id_conversa }}",
+            "task_id": "={{ $('Info').item.json.tarefa.id }}",
+            "board_id": "={{ $('Info').item.json.funil.id }}",
+            "placa": "={{ $fromAI('placa', 'Placa do veículo (ex: ABC1D23). Será normalizada em uppercase alfanumérico.', 'string', '') }}",
+            "marca": "={{ $fromAI('marca', 'Marca do veículo (ex: Honda, Toyota, VW)', 'string', '') }}",
+            "modelo": "={{ $fromAI('modelo', 'Modelo do veículo (ex: Civic, Corolla, Jetta)', 'string', '') }}",
+            "ano_modelo": "={{ $fromAI('ano_modelo', 'Ano do modelo (4 dígitos, ex: 2022)', 'number', 0) }}",
+            "combustivel": "={{ $fromAI('combustivel', 'Combustível: flex, gasolina, etanol, diesel, hibrido, eletrico', 'string', 'flex') }}",
+            "categoria": "={{ $fromAI('categoria', 'Categoria: passeio, hatch, sedan, suv, pickup, utilitario', 'string', 'passeio') }}",
+            "chassi": "={{ $fromAI('chassi', 'Chassi do veículo (opcional, 17 caracteres)', 'string', '') }}",
+            "condutor_cpf": "={{ $fromAI('condutor_cpf', 'CPF do condutor principal (apenas números)', 'string', '') }}",
+            "condutor_data_nascimento": "={{ $fromAI('condutor_data_nascimento', 'Data de nascimento do condutor AAAA-MM-DD', 'string', '') }}",
+            "condutor_sexo": "={{ $fromAI('condutor_sexo', 'Sexo do condutor: m ou f', 'string', '') }}",
+            "cnh_desde": "={{ $fromAI('cnh_desde', 'Data da primeira habilitação AAAA-MM-DD (opcional)', 'string', '') }}",
+            "estado_civil": "={{ $fromAI('estado_civil', 'Estado civil: solteiro, casado, divorciado, viuvo, uniao_estavel', 'string', 'solteiro') }}",
+            "uso_principal": "={{ $fromAI('uso_principal', 'Uso principal: particular, trabalho, comercial, transporte_app', 'string', 'particular') }}",
+            "cep": "={{ $fromAI('cep', 'CEP de pernoite/garagem (apenas números)', 'string', '') }}",
+            "cidade": "={{ $fromAI('cidade', 'Cidade de pernoite (opcional)', 'string', '') }}",
+            "uso_comercial": "={{ $fromAI('uso_comercial', 'Veículo usado comercialmente? true/false', 'boolean', false) }}",
+            "garagem": "={{ $fromAI('garagem', 'Pernoita em garagem fechada? true/false', 'boolean', true) }}",
+            "tipo_cobertura": "={{ $fromAI('tipo_cobertura', 'Tipo: compreensiva (casco completo), rcf (só responsabilidade civil), app (só acidentes pessoais), basica', 'string', 'compreensiva') }}",
+            "franquia_perfil": "={{ $fromAI('franquia_perfil', 'Franquia: reduzida, normal, ampliada', 'string', 'normal') }}",
+            "rcf_materiais": "={{ $fromAI('rcf_materiais', 'Limite RCF danos materiais em reais (opcional, padrão 100000)', 'number', 100000) }}",
+            "rcf_corporais": "={{ $fromAI('rcf_corporais', 'Limite RCF danos corporais em reais (opcional, padrão 100000)', 'number', 100000) }}",
+            "app_capital": "={{ $fromAI('app_capital', 'Capital APP por passageiro em reais (opcional)', 'number', 0) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "account_id",
+              "displayName": "account_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "conversation_id",
+              "displayName": "conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "task_id",
+              "displayName": "task_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "board_id",
+              "displayName": "board_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "placa",
+              "displayName": "placa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "marca",
+              "displayName": "marca",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "modelo",
+              "displayName": "modelo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ano_modelo",
+              "displayName": "ano_modelo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "combustivel",
+              "displayName": "combustivel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "categoria",
+              "displayName": "categoria",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "chassi",
+              "displayName": "chassi",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "condutor_cpf",
+              "displayName": "condutor_cpf",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "condutor_data_nascimento",
+              "displayName": "condutor_data_nascimento",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "condutor_sexo",
+              "displayName": "condutor_sexo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "cnh_desde",
+              "displayName": "cnh_desde",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "estado_civil",
+              "displayName": "estado_civil",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "uso_principal",
+              "displayName": "uso_principal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "cep",
+              "displayName": "cep",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "cidade",
+              "displayName": "cidade",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "uso_comercial",
+              "displayName": "uso_comercial",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "boolean"
+            },
+            {
+              "id": "garagem",
+              "displayName": "garagem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "boolean"
+            },
+            {
+              "id": "tipo_cobertura",
+              "displayName": "tipo_cobertura",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "franquia_perfil",
+              "displayName": "franquia_perfil",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "rcf_materiais",
+              "displayName": "rcf_materiais",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "rcf_corporais",
+              "displayName": "rcf_corporais",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "app_capital",
+              "displayName": "app_capital",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        7120,
+        752
+      ],
+      "id": "61c7d8d0-d3e1-46af-adc2-60cae8eaf944",
+      "name": "02b. Cotar auto"
+    }
+  ],
+  "connections": {
+    "Info": {
+      "main": [
+        [
+          {
+            "node": "Reset ou teste",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpar memória": {
+      "main": [
+        [
+          {
+            "node": "Resetar atributos contato",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resetar status atendimento": {
+      "main": [
+        [
+          {
+            "node": "Limpar fila de mensagens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reset ou teste": {
+      "main": [
+        [
+          {
+            "node": "Limpar memória",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Colocar etiqueta testando-agente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Agente ativado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resetar atributos contato": {
+      "main": [
+        [
+          {
+            "node": "Resetar atributos conversa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resetar atributos conversa": {
+      "main": [
+        [
+          {
+            "node": "Preparar reset task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resetar etiquetas": {
+      "main": [
+        [
+          {
+            "node": "Resetar status atendimento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpar fila de mensagens": {
+      "main": [
+        [
+          {
+            "node": "Enviar memória resetada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Colocar etiqueta testando-agente": {
+      "main": [
+        [
+          {
+            "node": "Enviar teste habilitado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente ativado?": {
+      "main": [
+        [
+          {
+            "node": "Salvar id_conversa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Transcrever audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcrever audio": {
+      "main": [
+        [
+          {
+            "node": "Extrair mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tipo de mensagem": {
+      "main": [
+        [
+          {
+            "node": "Download áudio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extrair mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extrair mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extrair mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extrair mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download áudio": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar id_conversa": {
+      "main": [
+        [
+          {
+            "node": "Tipo de mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair mensagem": {
+      "main": [
+        [
+          {
+            "node": "Áudio ou imagem?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Áudio ou imagem?": {
+      "main": [
+        [
+          {
+            "node": "Salvar transcrição/descrição",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enfileirar mensagem.",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem encavalada?": {
+      "main": [
+        [
+          {
+            "node": "Verificar status atendimento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar mensagens": {
+      "main": [
+        [
+          {
+            "node": "Mensagem encavalada?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Esperar": {
+      "main": [
+        [
+          {
+            "node": "Buscar mensagens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enfileirar mensagem.": {
+      "main": [
+        [
+          {
+            "node": "Esperar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente já terminou de responder?": {
+      "main": [
+        [
+          {
+            "node": "Bloquear status atendimento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Esperar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar status atendimento": {
+      "main": [
+        [
+          {
+            "node": "Agente já terminou de responder?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bloquear status atendimento": {
+      "main": [
+        [
+          {
+            "node": "Limpar fila de mensagens1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar transcrição/descrição": {
+      "main": [
+        [
+          {
+            "node": "Enfileirar mensagem.",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpar fila de mensagens1": {
+      "main": [
+        [
+          {
+            "node": "Marcar como lida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar como lida": {
+      "main": [
+        [
+          {
+            "node": "Resposta a outra mensagem?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Coletar mensagens": {
+      "main": [
+        [
+          {
+            "node": "Agente Corretor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente Corretor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memória": {
+      "ai_memory": [
+        [
+          {
+            "node": "Agente Corretor",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resposta a outra mensagem?": {
+      "main": [
+        [
+          {
+            "node": "Buscar mensagem referenciada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Coletar mensagens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar mensagem referenciada": {
+      "main": [
+        [
+          {
+            "node": "Coletar mensagens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar tool calls": {
+      "main": [
+        [
+          {
+            "node": "Áudio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Usou tools?": {
+      "main": [
+        [
+          {
+            "node": "Salvar tool calls",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Áudio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Output válido?": {
+      "main": [
+        [
+          {
+            "node": "Buscar novas entradas na fila",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Limpar status atendimento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpar status atendimento": {
+      "main": [
+        [
+          {
+            "node": "Output inválido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recebeu mensagem enquanto respondia?": {
+      "main": [
+        [
+          {
+            "node": "Buscar mensagens na memória",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Usou tools?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar novas entradas na fila": {
+      "main": [
+        [
+          {
+            "node": "Recebeu mensagem enquanto respondia?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Usou tools?1": {
+      "main": [
+        [
+          {
+            "node": "Salvar tool calls3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Limpar status atendimento3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar mensagens na memória": {
+      "main": [
+        [
+          {
+            "node": "Deletar última mensagem da memória",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deletar última mensagem da memória": {
+      "main": [
+        [
+          {
+            "node": "Usou tools?1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar tool calls3": {
+      "main": [
+        [
+          {
+            "node": "Limpar status atendimento3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente Corretor": {
+      "main": [
+        [
+          {
+            "node": "Output válido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar SSML": {
+      "main": [
+        [
+          {
+            "node": "Gravando...",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar texto": {
+      "main": [
+        [
+          {
+            "node": "Enviar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Formatar SSML",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Formatar texto",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gravando...": {
+      "main": [
+        [
+          {
+            "node": "Gerar áudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar áudio": {
+      "main": [
+        [
+          {
+            "node": "Enviar áudio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Formatar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar áudio": {
+      "main": [
+        [
+          {
+            "node": "Limpar status atendimento1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar texto": {
+      "main": [
+        [
+          {
+            "node": "Limpar status atendimento1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refletir": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Corretor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Áudio?": {
+      "main": [
+        [
+          {
+            "node": "Formatar SSML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Formatar texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reagir mensagem": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Corretor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar tarefa": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Corretor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gatilho WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar reset task": {
+      "main": [
+        [
+          {
+            "node": "Resetar task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resetar task": {
+      "main": [
+        [
+          {
+            "node": "Resetar etiquetas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "09. Gerar pagamento": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Corretor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02. Cotar vida": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Corretor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05. Emitir apolice": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Corretor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03. Enviar proposta": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Corretor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06. Cancelar apolice": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Corretor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10. Abrir sinistro": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Corretor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04. Buscar apolices": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Corretor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07. Escalar humano": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Corretor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02b. Cotar auto": {
+      "ai_tool": [
+        [
+          {
+            "node": "Agente Corretor",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}

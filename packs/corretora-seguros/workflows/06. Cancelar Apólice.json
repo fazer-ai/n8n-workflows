@@ -1,0 +1,443 @@
+{
+  "name": "06. Cancelar Apólice",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "account_id",
+              "type": "number"
+            },
+            {
+              "name": "conversation_id",
+              "type": "number"
+            },
+            {
+              "name": "inbox_id",
+              "type": "number"
+            },
+            {
+              "name": "task_id",
+              "type": "number"
+            },
+            {
+              "name": "board_id",
+              "type": "number"
+            },
+            {
+              "name": "motivo"
+            },
+            {
+              "name": "nome"
+            },
+            {
+              "name": "telefone"
+            },
+            {
+              "name": "alerta_conversation_id",
+              "type": "number"
+            },
+            {
+              "name": "alerta_inbox_id",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        288,
+        128
+      ],
+      "id": "f24b385a-7a61-40bf-8243-003fe92961a8",
+      "name": "Gatilho"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanTask",
+        "operation": "get",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $json.account_id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $json.board_id }}",
+          "mode": "id"
+        },
+        "kanbanTaskId": {
+          "__rl": true,
+          "value": "={{ $json.task_id }}",
+          "mode": "id"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        480,
+        128
+      ],
+      "id": "62d281cd-99c1-41e7-9f23-6baf63b325a7",
+      "name": "Buscar tarefa",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Monta a nova descrição da tarefa marcando o pedido de cancelamento.\n * Preserva a descrição existente (nunca sobrescreve cegamente).\n */\nconst task = $input.first().json;\nconst input = $('Gatilho').first().json;\nconst attrs = task.custom_attributes ?? {};\n\nconst temApolice = Boolean(attrs.numero_apolice);\nconst cabecalho = temApolice\n  ? `Cancelamento solicitado da apólice *${attrs.numero_apolice}* (${attrs.operadora ?? 'operadora não informada'}).`\n  : `Cancelamento solicitado (apólice ainda não emitida nesta tarefa).`;\n\nconst descricaoAtual = task.description ?? '';\nconst bloco = [\n  '---',\n  '🛑 *Cancelamento solicitado*',\n  `Em: ${DateTime.now().toISO()}`,\n  `Motivo: ${input.motivo || 'não informado'}`,\n  cabecalho\n].join('\\n');\n\nconst novaDescricao = descricaoAtual\n  ? `${descricaoAtual}\\n\\n${bloco}`\n  : bloco;\n\n// Resumo da conversa (passado para o escalar_humano)\nconst resumoConversa = [\n  `Cliente solicitou cancelamento.`,\n  temApolice ? `Apólice: ${attrs.numero_apolice} (${attrs.operadora}).` : `Tarefa sem apólice emitida.`,\n  `Motivo: ${input.motivo || 'não informado'}.`\n].join(' ');\n\nreturn [{\n  json: {\n    account_id: input.account_id,\n    conversation_id: input.conversation_id,\n    inbox_id: input.inbox_id,\n    task_id: input.task_id,\n    motivo: input.motivo,\n    nome: input.nome,\n    telefone: input.telefone,\n    nova_descricao: novaDescricao,\n    resumo_conversa: resumoConversa,\n    numero_apolice: attrs.numero_apolice,\n    operadora: attrs.operadora,\n    tem_apolice: temApolice\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        128
+      ],
+      "id": "bf829d69-392b-432f-ad2c-384e6450cd94",
+      "name": "Preparar atualização"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanTask",
+        "operation": "update",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $json.account_id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $json.board_id }}",
+          "mode": "id"
+        },
+        "kanbanTaskId": {
+          "__rl": true,
+          "value": "={{ $json.task_id }}",
+          "mode": "id"
+        },
+        "updateFields": {
+          "description": "={{ $json.nova_descricao }}",
+          "priority": "urgent"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        864,
+        128
+      ],
+      "id": "dd29003f-302b-40f7-b779-610c02533154",
+      "name": "Atualizar tarefa",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "<selecionar workflow 07. Escalar Humano>"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telefone": "={{ $('Preparar atualização').item.json.telefone }}",
+            "nome": "={{ $('Preparar atualização').item.json.nome }}",
+            "motivo": "=Cancelamento de apólice: {{ $('Preparar atualização').item.json.motivo }}",
+            "ultima_mensagem": "={{ $('Preparar atualização').item.json.motivo }}",
+            "resumo_conversa": "={{ $('Preparar atualização').item.json.resumo_conversa }}",
+            "account_id": "={{ $('Preparar atualização').item.json.account_id }}",
+            "conversation_id": "={{ $('Preparar atualização').item.json.conversation_id }}",
+            "inbox_id": "={{ $('Preparar atualização').item.json.inbox_id }}",
+            "alerta_conversation_id": "={{ $('Gatilho').item.json.alerta_conversation_id }}",
+            "alerta_inbox_id": "={{ $('Gatilho').item.json.alerta_inbox_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "telefone",
+              "displayName": "telefone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "nome",
+              "displayName": "nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "motivo",
+              "displayName": "motivo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "ultima_mensagem",
+              "displayName": "ultima_mensagem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "resumo_conversa",
+              "displayName": "resumo_conversa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "account_id",
+              "displayName": "account_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "conversation_id",
+              "displayName": "conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "inbox_id",
+              "displayName": "inbox_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "alerta_conversation_id",
+              "displayName": "alerta_conversation_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "alerta_inbox_id",
+              "displayName": "alerta_inbox_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1056,
+        128
+      ],
+      "id": "e3df8dd1-c691-4286-ba9d-cbf1b2f76e5f",
+      "name": "Escalar para humano"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r-canc-sts-0001",
+              "name": "status",
+              "value": "cancelamento_iniciado",
+              "type": "string"
+            },
+            {
+              "id": "r-canc-esc-0002",
+              "name": "escalado_para_humano",
+              "value": "={{ true }}",
+              "type": "boolean"
+            },
+            {
+              "id": "r-canc-rsm-0003",
+              "name": "resumo_cliente",
+              "value": "={{ $('Preparar atualização').item.json.tem_apolice ? `Registrei o pedido de cancelamento da sua apólice *${$('Preparar atualização').item.json.numero_apolice}* (${$('Preparar atualização').item.json.operadora}). Um corretor da equipe vai assumir daqui a pouco para validar as condições de cancelamento e te dar o retorno. Tudo bem?` : `Registrei seu pedido. Como a apólice ainda não foi emitida nessa negociação, o cancelamento é mais simples. Um corretor da equipe vai te chamar para confirmar e encerrar.` }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1248,
+        128
+      ],
+      "id": "37679cd8-1ec2-4f13-b70e-2c50d65dc189",
+      "name": "Resposta ao agente"
+    },
+    {
+      "parameters": {
+        "content": "## 06. Cancelar Apólice\n\nInicia cancelamento de uma apólice ativa. Fluxo:\n\n1. Busca a tarefa e lê `numero_apolice`, `operadora` etc.\n2. Atualiza a descrição da tarefa com o pedido de cancelamento (preservando o conteúdo anterior) e marca prioridade urgente.\n3. Chama o WF 07 Escalar Humano para um corretor assumir e validar condições.\n4. Retorna ao agente um texto pronto para avisar o cliente.\n\n**Entradas:**\n- `account_id`, `conversation_id`, `inbox_id`, `task_id`\n- `motivo`, `nome`, `telefone`",
+        "height": 340,
+        "width": 550,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        16
+      ],
+      "id": "27af644a-f1d1-478e-b776-0dbb1c4d9065",
+      "name": "Note principal"
+    },
+    {
+      "parameters": {
+        "content": "## Nota\n\nEste workflow NÃO chama a seguradora para efetivar o cancelamento no sistema dela.\n\nEm produção, esse passo seria feito pelo corretor humano (via portal da operadora) ou por um endpoint adicional do mock (DELETE /policy/:id).\n\nAqui a responsabilidade do agente IA é registrar o pedido, evidenciar na tarefa e transferir para o humano.",
+        "height": 332,
+        "width": 328,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1552,
+        16
+      ],
+      "id": "199dfdc3-215d-4efe-a9f5-e814cd8d30ad",
+      "name": "Note escopo"
+    },
+    {
+      "parameters": {
+        "content": "[![fazer.ai](https://framerusercontent.com/images/HqY9djLTzyutSKnuLLqBr92KbM.png?scale-down-to=256)](https://fazer.ai?utm_source=n8n&utm_campaign=sec-v3)\n\n## Esse é um template faça você mesmo do canal\n## Lucas Moreira\n\n### Inscreva-se no nosso canal no YouTube\n[![YouTube Lucas Moreira](https://img.shields.io/youtube/channel/subscribers/UCtmp6SxzLscu0GRTbgM8FTw?style=flat-square&logo=youtube&label=Inscreva-se&color=f00)](https://youtube.com/@eulucassmoreira?si=0lH7hwX9pukjhmPQ)\n[![Instagram](https://img.shields.io/badge/instagram-black?logo=instagram&style=for-the-badge)](https://instagram.com/eulucassmoreira)\n[![GitHub fazer.ai](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white&label)](https://github.com/fazer-ai)\n",
+        "height": 472,
+        "width": 550,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        -464
+      ],
+      "id": "601730fe-08c7-4e6f-a091-0e9ba5bc51cc",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "## Quer entender como funciona?\n\n\n### Assista o vídeo, deixe um like, e se inscreva no canal para ter acesso a mais workflows como esse!\n\n[![Vídeo YouTube Kanban Clínicas](https://i1.ytimg.com/vi_webp/vYtaGw3vRII/maxresdefault.webp)](https://www.youtube.com/watch?v=vYtaGw3vRII)",
+        "height": 472,
+        "width": 596,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        144,
+        -464
+      ],
+      "id": "cf2fee00-3651-46be-aee4-1a85280cafe5",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "## [Clique aqui e entre agora para tirar suas dúvidas](https://lucasmoreira.ai)\n[![Banner comunidade](https://assets-v2.circle.so/voccie8o44ecsfpx7p8z1j9rze82)](https://lucasmoreira.ai)",
+        "height": 472,
+        "width": 1124,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        752,
+        -464
+      ],
+      "id": "26588fdd-a4c9-471f-a96b-f02d356474fd",
+      "name": "Sticky Note36"
+    }
+  ],
+  "connections": {
+    "Gatilho": {
+      "main": [
+        [
+          {
+            "node": "Buscar tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar tarefa": {
+      "main": [
+        [
+          {
+            "node": "Preparar atualização",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar atualização": {
+      "main": [
+        [
+          {
+            "node": "Atualizar tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar tarefa": {
+      "main": [
+        [
+          {
+            "node": "Escalar para humano",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalar para humano": {
+      "main": [
+        [
+          {
+            "node": "Resposta ao agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "active": false
+}

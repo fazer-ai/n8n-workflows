@@ -1,0 +1,384 @@
+{
+  "name": "10. Abrir Sinistro",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "account_id",
+              "type": "number"
+            },
+            {
+              "name": "conversation_id",
+              "type": "number"
+            },
+            {
+              "name": "inbox_id",
+              "type": "number"
+            },
+            {
+              "name": "tipo_sinistro"
+            },
+            {
+              "name": "descricao_cliente"
+            },
+            {
+              "name": "nome"
+            },
+            {
+              "name": "telefone"
+            },
+            {
+              "name": "alerta_conversation_id",
+              "type": "number"
+            },
+            {
+              "name": "alerta_inbox_id",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        208,
+        112
+      ],
+      "id": "13653d6a-c661-4cc3-a103-98fff40c9d8d",
+      "name": "Gatilho"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Classifica o tipo de sinistro, monta orientações imediatas e gera\n * um número de sinistro determinístico (sinistro por dia + conversa).\n */\n\nfunction __hashHex(input) {\n  // Substitui o hash SHA-256 do node crypto.\n  // Módulo 'crypto' é bloqueado no task-runner do n8n, então fazemos\n  // um hash determinístico em JS puro (8x FNV-1a concatenados = 64 hex chars).\n  const str = String(input);\n  const seeds = [0x811c9dc5, 0xcbf29ce4, 0xdeadbeef, 0xcafebabe,\n                 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a];\n  let out = '';\n  for (let round = 0; round < 8; round++) {\n    let h = seeds[round];\n    for (let i = 0; i < str.length; i++) {\n      h ^= str.charCodeAt(i) + round;\n      h = Math.imul(h, 0x01000193) >>> 0;\n    }\n    out += h.toString(16).padStart(8, '0');\n  }\n  return out;\n}\nconst input = $input.first().json;\nconst tipo = String(input.tipo_sinistro || 'outros').toLowerCase();\nconst nome = input.nome || '';\n\nconst orientacoes = {\n  vazamento: [\n    'Primeiro: feche o registro de água se ainda estiver vazando.',\n    'Tire **foto de tudo** antes de mexer: teto, parede, piso, móveis atingidos.',\n    'Guarde qualquer recibo de conserto emergencial (chaveiro, encanador, etc).',\n    'Não jogue nada fora até o corretor avaliar.'\n  ],\n  incendio: [\n    'Prioridade agora é segurança: se ainda tiver fogo, 193.',\n    'Quando seguro, **não mexa no local**: a seguradora precisa inspecionar.',\n    'Tire fotos de longe do cômodo afetado.',\n    'Guarde todos os documentos que sobraram (notas fiscais, manuais).'\n  ],\n  colisao: [\n    'Se teve vítima: 190 ou 193 **antes de qualquer coisa**.',\n    'Faça o **Boletim de Ocorrência** (pode ser online em boa parte dos estados).',\n    'Tire fotos de todos os ângulos dos veículos, placas, rua, semáforos.',\n    'Pegue nome, telefone, seguradora e placa do outro motorista.',\n    '**Não aceite acordo na hora**: deixe a seguradora avaliar.'\n  ],\n  roubo: [\n    'BO imediato na delegacia (ou online, se o seu estado permitir).',\n    'Liste o que foi levado — se possível com notas fiscais ou fotos antigas.',\n    'Não limpe o local se houve arrombamento: perícia pode ser necessária.'\n  ],\n  morte: [\n    'Meus sentimentos. Vou te guiar com calma.',\n    'A seguradora vai pedir: **certidão de óbito**, CPF e comprovante de residência do falecido, documentos dos beneficiários listados na apólice.',\n    'Se foi morte natural: relatório médico ou atestado com a causa.',\n    'Se foi acidente: **Boletim de Ocorrência** e laudo do IML.',\n    'Guarde tudo junto: a equipe humana vai te ajudar a organizar o processo.'\n  ],\n  invalidez: [\n    'Junte **todos os laudos médicos** e exames, do início até agora.',\n    'O médico precisa emitir um relatório com **CID** e grau de invalidez.',\n    'Se foi por acidente: BO e laudos do pronto-socorro inicial.',\n    'A perícia da seguradora vai ser presencial — eu vou te avisar a data.'\n  ],\n  doenca_grave: [\n    'Precisamos do **diagnóstico formal** (CID no relatório médico).',\n    'Junte todos os exames que comprovam: biópsia, ressonância, sangue, o que houver.',\n    'O pedido é feito com toda essa documentação; a seguradora costuma pedir parecer de um segundo médico.'\n  ]\n};\n\nfunction matchTipo(t) {\n  for (const key of Object.keys(orientacoes)) {\n    if (t.includes(key)) return key;\n  }\n  return 'outros';\n}\nconst key = matchTipo(tipo);\nconst passos = orientacoes[key] || [\n  'Vou te ajudar agora. Enquanto um corretor humano assume, me manda o máximo de informação: o que aconteceu, data, local, e qualquer foto que tiver.'\n];\n\nconst seedStr = `${input.conversation_id}|${key}|${DateTime.now().toFormat('yyyy-MM-dd')}`;\nconst hash = __hashHex(seedStr);\nconst numeroSinistro = `SIN-${hash.slice(0, 10).toUpperCase()}`;\n\nconst orientacoesTexto = passos.map(p => `• ${p}`).join('\\n');\nconst resumoCliente = `Entendi, ${nome ? nome + ', ' : ''}pode respirar — registrei aqui como sinistro *${numeroSinistro}* e vou te orientar agora.\\n\\n` +\n  `*Passos imediatos:*\\n${orientacoesTexto}\\n\\n` +\n  `Um corretor da equipe já foi avisado e vai assumir daqui a pouco para conduzir a abertura junto à seguradora. Fica tranquilo que você não está sozinho.`;\n\nconst tituloTarefa = `Sinistro ${key} - ${nome || 'sem nome'} (${numeroSinistro})`;\nconst descricaoTarefa = [\n  `🚨 *Sinistro: ${numeroSinistro}*`,\n  `Tipo: ${key}`,\n  `Aberto em: ${DateTime.now().toISO()}`,\n  `Cliente: ${nome || 'não informado'} · ${input.telefone || 'sem telefone'}`,\n  '',\n  `*Relato do cliente:*`,\n  input.descricao_cliente || '(não informado)',\n  '',\n  `*Orientações imediatas enviadas ao cliente:*`,\n  ...passos.map(p => `- ${p}`)\n].join('\\n');\n\nconst resumoConversa = `Cliente acionou sinistro ${key.toUpperCase()}. Número: ${numeroSinistro}. Relato: ${input.descricao_cliente || '(sem texto)'}. Orientações iniciais já enviadas, card criado no funil Sinistros.`;\n\nreturn [{\n  json: {\n    account_id: input.account_id,\n    conversation_id: input.conversation_id,\n    inbox_id: input.inbox_id,\n    tipo_sinistro: key,\n    numero_sinistro: numeroSinistro,\n    nome,\n    telefone: input.telefone,\n    titulo_tarefa: tituloTarefa,\n    descricao_tarefa: descricaoTarefa,\n    resumo_cliente: resumoCliente,\n    resumo_conversa: resumoConversa\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        112
+      ],
+      "id": "f4fc9ef7-059c-489e-aebf-6ac39d6b4200",
+      "name": "Classificar sinistro"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanBoard",
+        "operation": "list",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $json.account_id }}",
+          "mode": "id"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        592,
+        112
+      ],
+      "id": "07a89e14-48c6-4853-95e9-c6f998a95786",
+      "name": "Listar funis",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Acha o board de Sinistros e a etapa \"Aberto\" dentro dele.\n * O node kanbanBoard.list do @fazer-ai/n8n-nodes-chatwoot emite um item\n * por board (já desempacotado), então usamos $input.all() para juntá-los.\n */\nconst boards = $input.all().map(i => i.json);\n\nif (boards.length === 0) {\n  throw new Error('kanbanBoard.list não retornou boards. Rode o WF 00 Configurações.');\n}\n\nconst sinistroBoard = boards.find(b => String(b.name || '').toLowerCase() === 'sinistros');\nif (!sinistroBoard) {\n  throw new Error('Funil \"Sinistros\" não encontrado. Rode o WF 00 Configurações.');\n}\n\n// Tenta encontrar as etapas dentro do board\nconst steps = sinistroBoard.steps_summary ?? sinistroBoard.steps ?? sinistroBoard.board_steps ?? [];\nif (!steps.length) {\n  throw new Error('Funil Sinistros encontrado mas sem etapas. Rode o WF 00 Configurações.');\n}\nconst abertoStep = steps.find(s => String(s.name || '').toLowerCase() === 'aberto');\nif (!abertoStep) {\n  throw new Error('Etapa \"Aberto\" não encontrada no funil Sinistros.');\n}\n\nconst m = $('Classificar sinistro').first().json;\n\nreturn [{\n  json: {\n    ...m,\n    board_id: sinistroBoard.id,\n    step_id: abertoStep.id\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        112
+      ],
+      "id": "58d9918d-ea5b-4a69-a75f-be85f0f09111",
+      "name": "Localizar board Sinistros"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanTask",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $json.account_id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $json.board_id }}",
+          "mode": "id"
+        },
+        "kanbanStepId": {
+          "__rl": true,
+          "value": "={{ $json.step_id }}",
+          "mode": "id"
+        },
+        "title": "={{ $json.titulo_tarefa }}",
+        "specifyCustomAttributesCreate": "keypair",
+        "customAttributesParametersCreate": {
+          "attributes": [
+            {
+              "name": "numero_sinistro",
+              "value": "={{ $json.numero_sinistro }}"
+            },
+            {
+              "name": "tipo_sinistro",
+              "value": "={{ $json.tipo_sinistro }}"
+            }
+          ]
+        },
+        "additionalFields": {
+          "description": "={{ $json.descricao_tarefa }}",
+          "priority": "urgent",
+          "conversation_ids": "={{ [$json.conversation_id] }}"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        976,
+        112
+      ],
+      "id": "f24b385a-7a61-40bf-8243-003fe92961a8",
+      "name": "Criar tarefa Sinistro",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "",
+          "mode": "id",
+          "cachedResultName": "<selecionar workflow>"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "telefone": "={{ $('Localizar board Sinistros').item.json.telefone }}",
+            "nome": "={{ $('Localizar board Sinistros').item.json.nome }}",
+            "motivo": "=Sinistro {{ $('Localizar board Sinistros').item.json.tipo_sinistro }} — {{ $('Localizar board Sinistros').item.json.numero_sinistro }}",
+            "ultima_mensagem": "={{ $('Gatilho').item.json.descricao_cliente }}",
+            "resumo_conversa": "={{ $('Localizar board Sinistros').item.json.resumo_conversa }}",
+            "account_id": "={{ $('Localizar board Sinistros').item.json.account_id }}",
+            "conversation_id": "={{ $('Localizar board Sinistros').item.json.conversation_id }}",
+            "inbox_id": "={{ $('Localizar board Sinistros').item.json.inbox_id }}",
+            "alerta_conversation_id": "={{ $('Gatilho').item.json.alerta_conversation_id }}",
+            "alerta_inbox_id": "={{ $('Gatilho').item.json.alerta_inbox_id }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1168,
+        112
+      ],
+      "id": "62d281cd-99c1-41e7-9f23-6baf63b325a7",
+      "name": "Escalar para humano"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r-sin-num-0001",
+              "name": "numero_sinistro",
+              "value": "={{ $('Localizar board Sinistros').item.json.numero_sinistro }}",
+              "type": "string"
+            },
+            {
+              "id": "r-sin-tip-0002",
+              "name": "tipo_sinistro",
+              "value": "={{ $('Localizar board Sinistros').item.json.tipo_sinistro }}",
+              "type": "string"
+            },
+            {
+              "id": "r-sin-tid-0003",
+              "name": "task_id_sinistro",
+              "value": "={{ $('Criar tarefa Sinistro').item.json.id ?? null }}",
+              "type": "number"
+            },
+            {
+              "id": "r-sin-esc-0004",
+              "name": "escalado_para_humano",
+              "value": "={{ true }}",
+              "type": "boolean"
+            },
+            {
+              "id": "r-sin-rsm-0005",
+              "name": "resumo_cliente",
+              "value": "={{ $('Localizar board Sinistros').item.json.resumo_cliente }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1360,
+        112
+      ],
+      "id": "bf829d69-392b-432f-ad2c-384e6450cd94",
+      "name": "Resposta ao agente"
+    },
+    {
+      "parameters": {
+        "content": "## 10. Abrir Sinistro\n\nChamada pelo agente quando o cliente aciona o seguro. Cria uma **nova tarefa no funil paralelo de Sinistros** (não mexe na task de venda/renovação).\n\n**Entradas:** `account_id`, `conversation_id`, `inbox_id`, `tipo_sinistro`, `descricao_cliente`, `nome`, `telefone`.\n\n**Fluxo:**\n1. Classifica o tipo (vazamento, colisão, morte, invalidez, etc) e monta orientações específicas.\n2. Gera `numero_sinistro` determinístico.\n3. Busca o funil \"Sinistros\" e a etapa \"Aberto\".\n4. Cria nova `kanbanTask` nesse funil, associada à mesma conversa, com prioridade urgente.\n5. Escala para um corretor humano via WF 07.\n6. Retorna `resumo_cliente` pronto para o agente enviar.",
+        "height": 372,
+        "width": 550,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        16
+      ],
+      "id": "dd29003f-302b-40f7-b779-610c02533154",
+      "name": "Note principal"
+    },
+    {
+      "parameters": {
+        "content": "## Funil paralelo\n\nA tarefa de venda/renovação do cliente fica intacta. Uma task nova é criada no board **Sinistros** — cliente pode ter apólice ativa e sinistro em andamento ao mesmo tempo, cada um com seu próprio ciclo.",
+        "height": 252,
+        "width": 328,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1552,
+        16
+      ],
+      "id": "e3df8dd1-c691-4286-ba9d-cbf1b2f76e5f",
+      "name": "Note funil paralelo"
+    },
+    {
+      "parameters": {
+        "content": "[![fazer.ai](https://framerusercontent.com/images/HqY9djLTzyutSKnuLLqBr92KbM.png?scale-down-to=256)](https://fazer.ai?utm_source=n8n&utm_campaign=sec-v3)\n\n## Esse é um template faça você mesmo do canal\n## Lucas Moreira\n\n### Inscreva-se no nosso canal no YouTube\n[![YouTube Lucas Moreira](https://img.shields.io/youtube/channel/subscribers/UCtmp6SxzLscu0GRTbgM8FTw?style=flat-square&logo=youtube&label=Inscreva-se&color=f00)](https://youtube.com/@eulucassmoreira?si=0lH7hwX9pukjhmPQ)\n[![Instagram](https://img.shields.io/badge/instagram-black?logo=instagram&style=for-the-badge)](https://instagram.com/eulucassmoreira)\n[![GitHub fazer.ai](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white&label)](https://github.com/fazer-ai)\n",
+        "height": 472,
+        "width": 550,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        -464
+      ],
+      "id": "bcca33fb-7067-44e4-ab33-483b0565b854",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "## Quer entender como funciona?\n\n\n### Assista o vídeo, deixe um like, e se inscreva no canal para ter acesso a mais workflows como esse!\n\n[![Vídeo YouTube Kanban Clínicas](https://i1.ytimg.com/vi_webp/vYtaGw3vRII/maxresdefault.webp)](https://www.youtube.com/watch?v=vYtaGw3vRII)",
+        "height": 472,
+        "width": 596,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        144,
+        -464
+      ],
+      "id": "877f5e7a-9fb7-4794-837f-87b0890aa4bb",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "## [Clique aqui e entre agora para tirar suas dúvidas](https://lucasmoreira.ai)\n[![Banner comunidade](https://assets-v2.circle.so/voccie8o44ecsfpx7p8z1j9rze82)](https://lucasmoreira.ai)",
+        "height": 472,
+        "width": 1124,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        752,
+        -464
+      ],
+      "id": "0866b689-e192-4f70-9a64-361f2149101b",
+      "name": "Sticky Note36"
+    }
+  ],
+  "connections": {
+    "Gatilho": {
+      "main": [
+        [
+          {
+            "node": "Classificar sinistro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classificar sinistro": {
+      "main": [
+        [
+          {
+            "node": "Listar funis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Listar funis": {
+      "main": [
+        [
+          {
+            "node": "Localizar board Sinistros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Localizar board Sinistros": {
+      "main": [
+        [
+          {
+            "node": "Criar tarefa Sinistro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar tarefa Sinistro": {
+      "main": [
+        [
+          {
+            "node": "Escalar para humano",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalar para humano": {
+      "main": [
+        [
+          {
+            "node": "Resposta ao agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "active": false
+}

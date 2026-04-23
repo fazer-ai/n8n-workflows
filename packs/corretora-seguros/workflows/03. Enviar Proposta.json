@@ -1,0 +1,416 @@
+{
+  "name": "03. Enviar Proposta",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "account_id",
+              "type": "number"
+            },
+            {
+              "name": "inbox_id",
+              "type": "number"
+            },
+            {
+              "name": "conversation_id",
+              "type": "number"
+            },
+            {
+              "name": "task_id",
+              "type": "number"
+            },
+            {
+              "name": "board_id",
+              "type": "number"
+            },
+            {
+              "name": "cliente_nome"
+            },
+            {
+              "name": "planos",
+              "type": "array"
+            },
+            {
+              "name": "disclaimer"
+            },
+            {
+              "name": "mensagem_abertura"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        160,
+        80
+      ],
+      "id": "5a87d678-816c-4274-92fc-af92bb0932ee",
+      "name": "Gatilho"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanTask",
+        "operation": "get",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $json.account_id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $json.board_id }}",
+          "mode": "id"
+        },
+        "kanbanTaskId": {
+          "__rl": true,
+          "value": "={{ $json.task_id }}",
+          "mode": "id"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        352,
+        80
+      ],
+      "id": "b3a7d4c1-1111-2222-3333-444455556668",
+      "name": "Carregar tarefa",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Monta o HTML da proposta de seguro de vida, pronto para virar PDF.\n *\n * Design enxuto em 1 página A4: capa + 3 cards de planos + disclaimer.\n * CSS inline (melhor compatibilidade com renderers HTML→PDF).\n */\nconst input = $('Gatilho').first().json;\n\nlet planos = input.planos;\nif (typeof planos === 'string') {\n  try { planos = JSON.parse(planos); } catch { throw new Error('planos deve ser JSON array.'); }\n}\nif (!Array.isArray(planos) || planos.length === 0) {\n  throw new Error('planos obrigatório (array com as opções retornadas pela cotar_vida).');\n}\n\nconst cliente = input.cliente_nome || 'Cliente';\nconst disclaimer = input.disclaimer || '';\nconst dataEmissao = DateTime.now().setLocale('pt-BR').toFormat(\"dd 'de' LLLL 'de' yyyy\");\n\nfunction brl(v) { return (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }\n\nfunction labelCobertura(tipo) {\n  const map = {\n    morte: 'Morte',\n    invalidez_permanente_acidente: 'Invalidez por acidente',\n    invalidez_permanente_doenca: 'Invalidez por doença',\n    doencas_graves: 'Doenças graves',\n    auxilio_funeral: 'Auxílio funeral',\n    diaria_incapacidade_temporaria: 'Diária de incapacidade'\n  };\n  return map[tipo] ?? tipo;\n}\n\nfunction coberturasHtml(coberturas) {\n  return coberturas.map(c => {\n    const valor = c.valorDiario !== undefined ? `${brl(c.valorDiario)}/dia` : brl(c.capital);\n    return `<tr><td class=\"cov-nome\">${labelCobertura(c.tipo)}</td><td class=\"cov-val\">${valor}</td></tr>`;\n  }).join('');\n}\n\nconst planosHtml = planos.map((p, i) => `\n  <div class=\"plano\">\n    <div class=\"plano-head\">\n      <div>\n        <div class=\"plano-nome\">Opção ${i + 1}: ${p.produto.nome}</div>\n        <div class=\"plano-op\">${p.operadora.nome} · SUSEP ${p.operadora.registroSusep}</div>\n      </div>\n      <div class=\"preco\">\n        <div class=\"preco-valor\">${brl(p.premio.mensal)}<span class=\"preco-unit\">/mês</span></div>\n        <div class=\"preco-anual\">${brl(p.premio.anual)} por ano</div>\n      </div>\n    </div>\n    <table class=\"cov-table\">\n      <tr><th colspan=\"2\">Coberturas</th></tr>\n      ${coberturasHtml(p.coberturas)}\n    </table>\n    <div class=\"carencias\">\n      <strong>Carências:</strong>\n      morte natural ${p.carencias.morteNatural} · morte acidental ${p.carencias.morteAcidental} ·\n      invalidez acidente ${p.carencias.invalidezAcidente}\n    </div>\n  </div>\n`).join('');\n\nconst html = `<!DOCTYPE html>\n<html lang=\"pt-BR\"><head><meta charset=\"UTF-8\"><title>Proposta</title>\n<style>\n  * { box-sizing: border-box; }\n  body { font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 30px 36px; color: #1f2937; font-size: 11pt; line-height: 1.4; }\n  .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #1e3a8a; padding-bottom: 10pt; margin-bottom: 18pt; }\n  .title { color: #1e3a8a; font-size: 20pt; font-weight: 700; margin: 0; }\n  .subtitle { color: #6b7280; font-size: 9pt; margin-top: 2pt; }\n  .brand { text-align: right; }\n  .brand-name { font-weight: 700; font-size: 12pt; color: #1e3a8a; }\n  .brand-sub { color: #6b7280; font-size: 9pt; }\n  .plano { border: 1px solid #e5e7eb; border-radius: 8pt; padding: 12pt 14pt; margin-bottom: 10pt; page-break-inside: avoid; }\n  .plano-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8pt; }\n  .plano-nome { color: #1e3a8a; font-size: 12pt; font-weight: 700; }\n  .plano-op { color: #6b7280; font-size: 9pt; margin-top: 1pt; }\n  .preco { text-align: right; }\n  .preco-valor { font-size: 16pt; color: #047857; font-weight: 700; }\n  .preco-unit { font-size: 10pt; font-weight: 400; color: #6b7280; }\n  .preco-anual { color: #6b7280; font-size: 9pt; margin-top: 1pt; }\n  .cov-table { width: 100%; border-collapse: collapse; margin-top: 4pt; }\n  .cov-table th { text-align: left; color: #374151; font-size: 9pt; padding: 4pt 0 2pt 0; border-bottom: 1px solid #e5e7eb; }\n  .cov-table td { font-size: 9.5pt; padding: 3pt 0; }\n  .cov-nome { color: #4b5563; width: 60%; }\n  .cov-val { color: #111827; font-weight: 500; text-align: right; }\n  .carencias { margin-top: 8pt; font-size: 8.5pt; color: #6b7280; border-top: 1px dashed #e5e7eb; padding-top: 6pt; }\n  .disclaimer { margin-top: 16pt; padding-top: 10pt; border-top: 1px solid #e5e7eb; font-size: 8pt; color: #9ca3af; font-style: italic; }\n</style></head><body>\n  <div class=\"header\">\n    <div>\n      <h1 class=\"title\">Proposta de Seguro de Vida</h1>\n      <div class=\"subtitle\">Emitida em ${dataEmissao}</div>\n    </div>\n    <div class=\"brand\">\n      <div class=\"brand-name\">Moreira Seguros</div>\n      <div class=\"brand-sub\">Cliente: ${cliente}</div>\n    </div>\n  </div>\n  ${planosHtml}\n  ${disclaimer ? `<div class=\"disclaimer\">${disclaimer}</div>` : ''}\n</body></html>`;\n\nconst filename = `proposta-${(cliente.replace(/[^a-z0-9]/gi, '-').toLowerCase() || 'cliente')}-${DateTime.now().toFormat('yyyy-MM-dd')}.pdf`;\n\nreturn [{ json: { html, filename } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        80
+      ],
+      "id": "9c97a593-6412-4b31-ae07-f4ebf706bde7",
+      "name": "Montar HTML"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.pdfshift.io/v3/convert/pdf",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { source: $json.html, format: 'A4', margin: '1cm', landscape: false, delay: 400 }.toJsonString() }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        736,
+        80
+      ],
+      "id": "71fd6857-655e-407f-a3e1-ff92625a896c",
+      "name": "Gerar PDF (PDFShift)",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Renomeia o binary para o nome do arquivo e devolve junto\n * o texto de abertura que vai acompanhar o PDF.\n */\nconst filename = $('Montar HTML').first().json.filename;\nconst input = $('Gatilho').first().json;\n\nconst mensagem = (input.mensagem_abertura ||\n  '📋 Segue sua proposta personalizada em PDF, com as 3 opções comparadas lado a lado. Me diga qual opção fez mais sentido e a gente segue com a contratação.'\n);\n\n// Ajusta o filename no binary\nconst binary = $input.first().binary ?? {};\nif (binary.data) {\n  binary.data.fileName = filename;\n  binary.data.mimeType = 'application/pdf';\n}\n\nreturn [{\n  json: { mensagem, filename },\n  binary\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        80
+      ],
+      "id": "a68ae52b-907c-4a4f-82a2-788bbe8b17b1",
+      "name": "Renomear binary + mensagem"
+    },
+    {
+      "parameters": {
+        "operation": "sendFile",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Gatilho').item.json.account_id }}",
+          "mode": "id"
+        },
+        "inboxId": {
+          "__rl": true,
+          "value": "={{ $('Gatilho').item.json.inbox_id }}",
+          "mode": "id"
+        },
+        "conversationId": {
+          "__rl": true,
+          "value": "={{ $('Gatilho').item.json.conversation_id }}",
+          "mode": "id"
+        },
+        "fileCaption": "={{ $('Renomear binary + mensagem').item.json.mensagem }}",
+        "sendFileOptions": {},
+        "binaryPropertyName": "data"
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        928,
+        256
+      ],
+      "id": "05a1d0c2-0e64-4cb2-a76b-190a42c41fdf",
+      "name": "Enviar PDF",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "resource": "kanbanTask",
+        "operation": "update",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Gatilho').first().json.account_id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $('Gatilho').first().json.board_id }}",
+          "mode": "id"
+        },
+        "kanbanTaskId": {
+          "__rl": true,
+          "value": "={{ $('Gatilho').first().json.task_id }}",
+          "mode": "id"
+        },
+        "updateFields": {
+          "board_step_id": {
+            "__rl": true,
+            "value": "={{ $('Carregar tarefa').first().json.board.steps.find(s => s.name === 'Proposta Enviada').id }}",
+            "mode": "id"
+          }
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        256
+      ],
+      "id": "c3a7d4c1-1111-2222-3333-444455556669",
+      "name": "Mover para Proposta Enviada",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## 03. Enviar Proposta (com PDF)\n\nRecebe a lista `planos` (saída do WF 02 Cotar Vida), monta um PDF elegante via PDFShift e envia na conversa do Chatwoot: primeiro uma mensagem de texto de abertura, depois o PDF anexado.\n\n**Entradas:**\n- `account_id`, `inbox_id`, `conversation_id`, `task_id`\n- `cliente_nome`\n- `planos` (array do WF 02)\n- `disclaimer`, `mensagem_abertura` (opcionais)",
+        "height": 300,
+        "width": 550,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        16
+      ],
+      "id": "75643fdb-9c85-4dcc-8ad8-05a2ec0a76d1",
+      "name": "Note principal"
+    },
+    {
+      "parameters": {
+        "content": "## PDFShift\n\nAPI free tier 50 PDFs/mês. Cria credencial tipo **Header Auth** no n8n chamada \"PDFShift\":\n\n- **Name**: `X-API-Key`\n- **Value**: sua API key da PDFShift\n\nE associa ao node \"Gerar PDF (PDFShift)\". Validação da credencial fica no WF 00 (GET /v3/account). Se quiser trocar por self-hosted (Gotenberg) depois, só ajustar URL/auth.",
+        "height": 260,
+        "width": 416,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1456,
+        16
+      ],
+      "id": "7d4cde7c-51dc-42e9-a255-dc815d8c3c37",
+      "name": "Note PDFShift"
+    },
+    {
+      "parameters": {
+        "content": "[![fazer.ai](https://framerusercontent.com/images/HqY9djLTzyutSKnuLLqBr92KbM.png?scale-down-to=256)](https://fazer.ai?utm_source=n8n&utm_campaign=sec-v3)\n\n## Esse é um template faça você mesmo do canal\n## Lucas Moreira\n\n### Inscreva-se no nosso canal no YouTube\n[![YouTube Lucas Moreira](https://img.shields.io/youtube/channel/subscribers/UCtmp6SxzLscu0GRTbgM8FTw?style=flat-square&logo=youtube&label=Inscreva-se&color=f00)](https://youtube.com/@eulucassmoreira?si=0lH7hwX9pukjhmPQ)\n[![Instagram](https://img.shields.io/badge/instagram-black?logo=instagram&style=for-the-badge)](https://instagram.com/eulucassmoreira)\n[![GitHub fazer.ai](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white&label)](https://github.com/fazer-ai)\n",
+        "height": 472,
+        "width": 550,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        -464
+      ],
+      "id": "25656482-231e-4aa2-ac19-258887eda197",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "## Quer entender como funciona?\n\n\n### Assista o vídeo, deixe um like, e se inscreva no canal para ter acesso a mais workflows como esse!\n\n[![Vídeo YouTube Kanban Clínicas](https://i1.ytimg.com/vi_webp/vYtaGw3vRII/maxresdefault.webp)](https://www.youtube.com/watch?v=vYtaGw3vRII)",
+        "height": 472,
+        "width": 596,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        144,
+        -464
+      ],
+      "id": "850ed6ed-abbb-413b-8a86-79c1fb7abd1f",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "## [Clique aqui e entre agora para tirar suas dúvidas](https://lucasmoreira.ai)\n[![Banner comunidade](https://assets-v2.circle.so/voccie8o44ecsfpx7p8z1j9rze82)](https://lucasmoreira.ai)",
+        "height": 472,
+        "width": 1124,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        752,
+        -464
+      ],
+      "id": "049df7b4-0364-4db0-8b74-d2658811271d",
+      "name": "Sticky Note36"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r-prop-sts-0001",
+              "name": "status",
+              "value": "proposta_enviada",
+              "type": "string"
+            },
+            {
+              "id": "r-prop-fnm-0002",
+              "name": "filename",
+              "value": "={{ $('Renomear binary + mensagem').item.json.filename }}",
+              "type": "string"
+            },
+            {
+              "id": "r-prop-msg-0003",
+              "name": "mensagem_enviada",
+              "value": "={{ $('Renomear binary + mensagem').item.json.mensagem }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1312,
+        256
+      ],
+      "id": "df824f32-b194-4499-8170-884f78e0eae0",
+      "name": "Resposta ao agente"
+    }
+  ],
+  "connections": {
+    "Gatilho": {
+      "main": [
+        [
+          {
+            "node": "Carregar tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Carregar tarefa": {
+      "main": [
+        [
+          {
+            "node": "Montar HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar HTML": {
+      "main": [
+        [
+          {
+            "node": "Gerar PDF (PDFShift)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar PDF (PDFShift)": {
+      "main": [
+        [
+          {
+            "node": "Renomear binary + mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Renomear binary + mensagem": {
+      "main": [
+        [
+          {
+            "node": "Enviar PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar PDF": {
+      "main": [
+        [
+          {
+            "node": "Mover para Proposta Enviada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mover para Proposta Enviada": {
+      "main": [
+        [
+          {
+            "node": "Resposta ao agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}

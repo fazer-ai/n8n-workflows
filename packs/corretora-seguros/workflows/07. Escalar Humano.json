@@ -1,0 +1,262 @@
+{
+  "name": "07. Escalar Humano",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "telefone"
+            },
+            {
+              "name": "nome"
+            },
+            {
+              "name": "motivo"
+            },
+            {
+              "name": "ultima_mensagem"
+            },
+            {
+              "name": "resumo_conversa"
+            },
+            {
+              "name": "account_id",
+              "type": "number"
+            },
+            {
+              "name": "conversation_id",
+              "type": "number"
+            },
+            {
+              "name": "inbox_id",
+              "type": "number"
+            },
+            {
+              "name": "alerta_conversation_id",
+              "type": "number"
+            },
+            {
+              "name": "alerta_inbox_id",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        352,
+        112
+      ],
+      "id": "02ce2220-b2eb-45ce-99e0-a63961e792a8",
+      "name": "Gatilho"
+    },
+    {
+      "parameters": {
+        "operation": "addLabels",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $json.account_id }}",
+          "mode": "id"
+        },
+        "inboxId": {
+          "__rl": true,
+          "value": "={{ $json.inbox_id }}",
+          "mode": "id"
+        },
+        "conversationId": {
+          "__rl": true,
+          "value": "={{ $json.conversation_id }}",
+          "mode": "id"
+        },
+        "labels": "={{ [\"agente-off\"] }}"
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        544,
+        112
+      ],
+      "id": "649cb01e-13f5-4bbd-a32b-d9b5cffca8a3",
+      "name": "Adicionar etiqueta agente-off",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "sendMessage",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Gatilho').item.json.account_id }}",
+          "mode": "id"
+        },
+        "inboxId": {
+          "__rl": true,
+          "value": "={{ $('Gatilho').item.json.alerta_inbox_id }}",
+          "mode": "id"
+        },
+        "conversationId": {
+          "__rl": true,
+          "value": "={{ $('Gatilho').item.json.alerta_conversation_id }}",
+          "mode": "id"
+        },
+        "content": "=🚨 Assistente desabilitado para {{ $('Gatilho').item.json.nome || '(sem nome)' }} ({{ $('Gatilho').item.json.telefone }}).\n\n*Motivo:* {{ $('Gatilho').item.json.motivo || 'não informado' }}\n\n*Última mensagem:*\n\"{{ $('Gatilho').item.json.ultima_mensagem }}\"\n\n*Resumo da conversa:*\n\"{{ $('Gatilho').item.json.resumo_conversa }}\"",
+        "replyToMessageId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "additionalFields": {}
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        736,
+        112
+      ],
+      "id": "5e05f541-7d02-405e-b887-10c7a4fc77ae",
+      "name": "Notificar corretor humano",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "content": "## 07. Escalar Humano\n\nMarca a conversa com a etiqueta `agente-off` (para o agente IA parar de responder) e dispara um alerta para o canal de corretores humanos com resumo e última mensagem do cliente.\n\n`alerta_conversation_id` e `alerta_inbox_id` são obrigatórios e apontam para a conversa/inbox de alertas de corretores.",
+        "height": 280,
+        "width": 550,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        16
+      ],
+      "id": "2e4df484-082a-4060-ae32-641d48a9f06d",
+      "name": "Note principal"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r-esc-sts-0001",
+              "name": "status",
+              "value": "escalado",
+              "type": "string"
+            },
+            {
+              "id": "r-esc-esc-0002",
+              "name": "escalado_para_humano",
+              "value": "={{ true }}",
+              "type": "boolean"
+            },
+            {
+              "id": "r-esc-rsm-0003",
+              "name": "resumo_cliente",
+              "value": "Um corretor da equipe vai te responder em breve. Obrigada pela paciência.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        928,
+        112
+      ],
+      "id": "1700ff96-2816-4a3e-9291-711fc3c81acf",
+      "name": "Resposta ao agente"
+    },
+    {
+      "parameters": {
+        "content": "[![fazer.ai](https://framerusercontent.com/images/HqY9djLTzyutSKnuLLqBr92KbM.png?scale-down-to=256)](https://fazer.ai?utm_source=n8n&utm_campaign=sec-v3)\n\n## Esse é um template faça você mesmo do canal\n## Lucas Moreira\n\n### Inscreva-se no nosso canal no YouTube\n[![YouTube Lucas Moreira](https://img.shields.io/youtube/channel/subscribers/UCtmp6SxzLscu0GRTbgM8FTw?style=flat-square&logo=youtube&label=Inscreva-se&color=f00)](https://youtube.com/@eulucassmoreira?si=0lH7hwX9pukjhmPQ)\n[![Instagram](https://img.shields.io/badge/instagram-black?logo=instagram&style=for-the-badge)](https://instagram.com/eulucassmoreira)\n[![GitHub fazer.ai](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white&label)](https://github.com/fazer-ai)\n",
+        "height": 472,
+        "width": 550,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        -464
+      ],
+      "id": "eac8327f-f72b-4697-91cc-51480eaf3e5e",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "## Quer entender como funciona?\n\n\n### Assista o vídeo, deixe um like, e se inscreva no canal para ter acesso a mais workflows como esse!\n\n[![Vídeo YouTube Kanban Clínicas](https://i1.ytimg.com/vi_webp/vYtaGw3vRII/maxresdefault.webp)](https://www.youtube.com/watch?v=vYtaGw3vRII)",
+        "height": 472,
+        "width": 596,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        144,
+        -464
+      ],
+      "id": "7907b33b-6937-410f-aad1-4df625067528",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "## [Clique aqui e entre agora para tirar suas dúvidas](https://lucasmoreira.ai)\n[![Banner comunidade](https://assets-v2.circle.so/voccie8o44ecsfpx7p8z1j9rze82)](https://lucasmoreira.ai)",
+        "height": 472,
+        "width": 1124,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        752,
+        -464
+      ],
+      "id": "3eb49bc1-08f8-4a42-9fdb-4780f0184042",
+      "name": "Sticky Note36"
+    }
+  ],
+  "connections": {
+    "Gatilho": {
+      "main": [
+        [
+          {
+            "node": "Adicionar etiqueta agente-off",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adicionar etiqueta agente-off": {
+      "main": [
+        [
+          {
+            "node": "Notificar corretor humano",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notificar corretor humano": {
+      "main": [
+        [
+          {
+            "node": "Resposta ao agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "active": false
+}

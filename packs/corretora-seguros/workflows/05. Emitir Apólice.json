@@ -1,0 +1,430 @@
+{
+  "name": "05. Emitir Apólice",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "account_id",
+              "type": "number"
+            },
+            {
+              "name": "conversation_id",
+              "type": "number"
+            },
+            {
+              "name": "task_id",
+              "type": "number"
+            },
+            {
+              "name": "board_id",
+              "type": "number"
+            },
+            {
+              "name": "plan_id"
+            },
+            {
+              "name": "operadora_codigo"
+            },
+            {
+              "name": "payment_method"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        160,
+        144
+      ],
+      "id": "46573f56-237d-4cd3-ac65-d31d516fd176",
+      "name": "Gatilho"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Monta payload PATCH para /quote-life/accept.\n *\n * Lê consent_id, original_quote_request, idempotency_key e payment_transaction_id\n * diretamente dos custom_attributes da tarefa (persistidos pelos WFs 02 e 09).\n * O agente só precisa informar qual plano foi escolhido e o método de pagamento.\n */\nconst input = $('Gatilho').first().json;\nconst tarefa = $('Carregar tarefa').first().json;\nconst attrs = tarefa.custom_attributes ?? {};\n\nconst consentId = attrs.consent_id_cotacao;\nconst idempotencyKey = attrs.idempotency_key;\nconst paymentTransactionId = attrs.payment_transaction_id;\nlet originalQuoteRequest = attrs.original_quote_request;\n\nif (!consentId) throw new Error('consent_id_cotacao ausente na tarefa. Rode a cotação antes de emitir.');\nif (!originalQuoteRequest) throw new Error('original_quote_request ausente na tarefa. Rode a cotação antes de emitir.');\nif (!paymentTransactionId) throw new Error('payment_transaction_id ausente na tarefa. Gere o pagamento antes de emitir.');\nif (!input.plan_id && !input.operadora_codigo) {\n  throw new Error('Informe plan_id ou operadora_codigo para selecionar o plano.');\n}\n\nif (typeof originalQuoteRequest === 'string') {\n  try { originalQuoteRequest = JSON.parse(originalQuoteRequest); }\n  catch { throw new Error('original_quote_request na tarefa não é JSON válido.'); }\n}\n\nconst selectedPlan = input.plan_id\n  ? { planId: input.plan_id }\n  : { operadora: { codigo: input.operadora_codigo } };\n\nconst payload = {\n  data: {\n    consentId,\n    originalQuoteRequest,\n    selectedPlan,\n    paymentConfirmation: {\n      transactionId: paymentTransactionId,\n      method: input.payment_method ?? 'pix'\n    },\n    acceptance: true\n  }\n};\n\nreturn [{ json: { payload, idempotencyKey } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        144
+      ],
+      "id": "ded6a330-9f9a-404a-93db-5ec36832f75d",
+      "name": "Montar payload"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "<SUA URL N8N>/webhook/quote-life/accept",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-idempotency-key",
+              "value": "={{ $json.idempotencyKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.payload.toJsonString() }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        736,
+        144
+      ],
+      "id": "4b856976-a83f-4e4d-9f28-c252da16b4d4",
+      "name": "Emitir na seguradora (mock)"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Processa resposta e prepara dados para atualizar a tarefa.\n */\nconst resposta = $input.first().json;\n\nif (resposta.errors) {\n  throw new Error(`Seguradora recusou a emissão: ${JSON.stringify(resposta.errors)}`);\n}\nif (!resposta.data || !resposta.data.policyNumber) {\n  throw new Error('Resposta inesperada na emissão: ' + JSON.stringify(resposta).slice(0, 300));\n}\n\nconst d = resposta.data;\nconst input = $('Gatilho').first().json;\n\nfunction formatBRL(v) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }\n\n// Capital de morte (cobertura principal)\nconst coberturaMorte = d.coberturas.find(c => c.tipo === 'morte');\nconst capitalMorte = coberturaMorte ? coberturaMorte.capital : 0;\n\n// Resumo dos beneficiários (para salvar na tarefa)\nconst beneficiariosResumo = (d.beneficiarios || [])\n  .map(b => `${b.nome} (${b.parentesco}, ${b.percentual}%)`)\n  .join('; ');\n\nconst resumoCliente = `🎉 Apólice emitida!\\n\\n` +\n  `*Nº da apólice:* ${d.policyNumber}\\n` +\n  `*Operadora:* ${d.selectedPlan.operadora.nome}\\n` +\n  `*Produto:* ${d.selectedPlan.produto.nome}\\n` +\n  `*Vigência:* ${d.startDate} a ${d.endDate}\\n` +\n  `*Capital de morte:* ${formatBRL(capitalMorte)}\\n` +\n  `*Mensalidade:* ${formatBRL(d.premium.mensal)}\\n\\n` +\n  `📄 Apólice em PDF: ${d.documents.policyPdfUrl}`;\n\nreturn [{\n  json: {\n    policyNumber: d.policyNumber,\n    policyPdfUrl: d.documents.policyPdfUrl,\n    resumoContratualUrl: d.documents.resumoContratualUrl,\n    operadora: d.selectedPlan.operadora.nome,\n    plano_nome: d.selectedPlan.produto.nome,\n    startDate: d.startDate,\n    endDate: d.endDate,\n    premio_mensal: d.premium.mensal,\n    capital_morte: capitalMorte,\n    beneficiarios_resumo: beneficiariosResumo,\n    fumante: d.insured?.fumante ? 'sim' : 'nao',\n    resumo_cliente: resumoCliente,\n    account_id: input.account_id,\n    task_id: input.task_id\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        144
+      ],
+      "id": "c49d09a4-a1ae-4892-9d9c-76f618d249e2",
+      "name": "Processar emissão"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanTask",
+        "operation": "update",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $json.account_id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $json.board_id }}",
+          "mode": "id"
+        },
+        "kanbanTaskId": {
+          "__rl": true,
+          "value": "={{ $json.task_id }}",
+          "mode": "id"
+        },
+        "specifyCustomAttributesUpdate": "json",
+        "updateFields": {
+          "board_step_id": {
+            "__rl": true,
+            "value": "={{ $('Carregar tarefa').first().json.board.steps.find(s => s.name === 'Apólice Emitida').id }}",
+            "mode": "id"
+          },
+          "value": "={{ Number($json.premio_mensal) * 12 }}"
+        },
+        "customAttributesJsonUpdate": "={{ JSON.stringify({ ...($('Carregar tarefa').first().json.custom_attributes || {}), numero_apolice: $json.policyNumber, operadora: $json.operadora, plano_escolhido: $json.plano_nome, capital_morte: $json.capital_morte, premio_mensal: $json.premio_mensal, fumante: $json.fumante, beneficiarios_resumo: $json.beneficiarios_resumo, data_vigencia: $json.startDate, data_renovacao: $json.endDate }) }}"
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        144
+      ],
+      "id": "e18a4305-0b6d-44f9-bf57-db80ed3bc992",
+      "name": "Salvar apólice na tarefa",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r-pol-num-0001",
+              "name": "policyNumber",
+              "value": "={{ $('Processar emissão').item.json.policyNumber }}",
+              "type": "string"
+            },
+            {
+              "id": "r-pol-pdf-0002",
+              "name": "policyPdfUrl",
+              "value": "={{ $('Processar emissão').item.json.policyPdfUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "r-pol-res-0003",
+              "name": "resumoContratualUrl",
+              "value": "={{ $('Processar emissão').item.json.resumoContratualUrl }}",
+              "type": "string"
+            },
+            {
+              "id": "r-pol-ope-0004",
+              "name": "operadora",
+              "value": "={{ $('Processar emissão').item.json.operadora }}",
+              "type": "string"
+            },
+            {
+              "id": "r-pol-pln-0005",
+              "name": "plano_nome",
+              "value": "={{ $('Processar emissão').item.json.plano_nome }}",
+              "type": "string"
+            },
+            {
+              "id": "r-pol-sta-0006",
+              "name": "startDate",
+              "value": "={{ $('Processar emissão').item.json.startDate }}",
+              "type": "string"
+            },
+            {
+              "id": "r-pol-end-0007",
+              "name": "endDate",
+              "value": "={{ $('Processar emissão').item.json.endDate }}",
+              "type": "string"
+            },
+            {
+              "id": "r-pol-prm-0008",
+              "name": "premio_mensal",
+              "value": "={{ $('Processar emissão').item.json.premio_mensal }}",
+              "type": "number"
+            },
+            {
+              "id": "r-pol-cap-0009",
+              "name": "capital_morte",
+              "value": "={{ $('Processar emissão').item.json.capital_morte }}",
+              "type": "number"
+            },
+            {
+              "id": "r-pol-ben-0010",
+              "name": "beneficiarios_resumo",
+              "value": "={{ $('Processar emissão').item.json.beneficiarios_resumo }}",
+              "type": "string"
+            },
+            {
+              "id": "r-pol-rsm-0011",
+              "name": "resumo_cliente",
+              "value": "={{ $('Processar emissão').item.json.resumo_cliente }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1312,
+        144
+      ],
+      "id": "3b611e5a-10eb-423a-b6e8-ee7ebfc5d79f",
+      "name": "Resposta ao agente"
+    },
+    {
+      "parameters": {
+        "content": "## 05. Emitir Apólice (Vida)\n\nPATCH `/quote-life/accept` no mock. Mock stateless: reenvia `originalQuoteRequest` + `selectedPlan` + `paymentConfirmation`.\n\n**Entradas:**\n- `account_id`, `conversation_id`, `task_id`\n- `consent_id` (do WF 02 / tarefa)\n- `original_quote_request` (do WF 02)\n- `plan_id` ou `operadora_codigo`\n- `payment_transaction_id`, `payment_method`",
+        "height": 300,
+        "width": 550,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        16
+      ],
+      "id": "140fa948-82b0-4c84-b819-fbbbd9a69d4b",
+      "name": "Note principal"
+    },
+    {
+      "parameters": {
+        "content": "## Emissão\n\nMock valida recomputando o hash do `originalQuoteRequest` e conferindo com o `consentId`. Se bate, emite apólice `LV-<OP>-<hash>` com vigência de 12 meses. Prêmio bate com o da cotação (mesmo PRNG seedado no mesmo hash).",
+        "height": 180,
+        "width": 432,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        16
+      ],
+      "id": "4f5b3d5e-32cb-4220-86aa-8a25556e60dc",
+      "name": "Note mock"
+    },
+    {
+      "parameters": {
+        "content": "## Persistir na tarefa\n\nnumero_apolice, operadora, plano_escolhido, capital_morte, premio_mensal, fumante, beneficiarios_resumo, data_vigencia, data_renovacao. Base para renovação (WF 08) e busca (WF 04).",
+        "height": 164,
+        "width": 432,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        208
+      ],
+      "id": "16555ccb-d059-4a20-a603-ef68c29d2826",
+      "name": "Note persistencia"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanTask",
+        "operation": "get",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $json.account_id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $json.board_id }}",
+          "mode": "id"
+        },
+        "kanbanTaskId": {
+          "__rl": true,
+          "value": "={{ $json.task_id }}",
+          "mode": "id"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        352,
+        144
+      ],
+      "id": "a7e5d4c1-1111-2222-3333-444455556666",
+      "name": "Carregar tarefa",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "content": "[![fazer.ai](https://framerusercontent.com/images/HqY9djLTzyutSKnuLLqBr92KbM.png?scale-down-to=256)](https://fazer.ai?utm_source=n8n&utm_campaign=sec-v3)\n\n## Esse é um template faça você mesmo do canal\n## Lucas Moreira\n\n### Inscreva-se no nosso canal no YouTube\n[![YouTube Lucas Moreira](https://img.shields.io/youtube/channel/subscribers/UCtmp6SxzLscu0GRTbgM8FTw?style=flat-square&logo=youtube&label=Inscreva-se&color=f00)](https://youtube.com/@eulucassmoreira?si=0lH7hwX9pukjhmPQ)\n[![Instagram](https://img.shields.io/badge/instagram-black?logo=instagram&style=for-the-badge)](https://instagram.com/eulucassmoreira)\n[![GitHub fazer.ai](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white&label)](https://github.com/fazer-ai)\n",
+        "height": 472,
+        "width": 550,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        -464
+      ],
+      "id": "3f3c1b88-9555-4172-b568-a5f222217543",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "## Quer entender como funciona?\n\n\n### Assista o vídeo, deixe um like, e se inscreva no canal para ter acesso a mais workflows como esse!\n\n[![Vídeo YouTube Kanban Clínicas](https://i1.ytimg.com/vi_webp/vYtaGw3vRII/maxresdefault.webp)](https://www.youtube.com/watch?v=vYtaGw3vRII)",
+        "height": 472,
+        "width": 596,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        144,
+        -464
+      ],
+      "id": "a923924d-23f3-4199-bdbd-cb510824466a",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "## [Clique aqui e entre agora para tirar suas dúvidas](https://lucasmoreira.ai)\n[![Banner comunidade](https://assets-v2.circle.so/voccie8o44ecsfpx7p8z1j9rze82)](https://lucasmoreira.ai)",
+        "height": 472,
+        "width": 1124,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        752,
+        -464
+      ],
+      "id": "5e7ee9b9-0856-4226-bdc8-2eb3529a067c",
+      "name": "Sticky Note36"
+    }
+  ],
+  "connections": {
+    "Gatilho": {
+      "main": [
+        [
+          {
+            "node": "Carregar tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar payload": {
+      "main": [
+        [
+          {
+            "node": "Emitir na seguradora (mock)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Emitir na seguradora (mock)": {
+      "main": [
+        [
+          {
+            "node": "Processar emissão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processar emissão": {
+      "main": [
+        [
+          {
+            "node": "Salvar apólice na tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar apólice na tarefa": {
+      "main": [
+        [
+          {
+            "node": "Resposta ao agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Carregar tarefa": {
+      "main": [
+        [
+          {
+            "node": "Montar payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "active": false
+}

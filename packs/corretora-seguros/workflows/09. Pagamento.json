@@ -1,0 +1,320 @@
+{
+  "name": "09. Pagamento",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "account_id",
+              "type": "number"
+            },
+            {
+              "name": "conversation_id",
+              "type": "number"
+            },
+            {
+              "name": "task_id",
+              "type": "number"
+            },
+            {
+              "name": "board_id",
+              "type": "number"
+            },
+            {
+              "name": "valor",
+              "type": "number"
+            },
+            {
+              "name": "metodo"
+            },
+            {
+              "name": "descricao"
+            },
+            {
+              "name": "nome_titular"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        352,
+        128
+      ],
+      "id": "f1b81eea-21cd-406d-9f67-d8e882dafcc6",
+      "name": "Gatilho"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Gera cobrança simulada (PIX ou boleto) determinística por tarefa.\n *\n * Em produção esse workflow chamaria sua API de pagamentos favorita\n * e retornaria link de pagamento real. Aqui devolvemos um\n * `transactionId` previsível para que o WF 05 Emitir Apólice possa\n * confirmar o pagamento sem dependência externa.\n */\n\nfunction __hashHex(input) {\n  // Substitui o hash SHA-256 do node crypto.\n  // Módulo 'crypto' é bloqueado no task-runner do n8n, então fazemos\n  // um hash determinístico em JS puro (8x FNV-1a concatenados = 64 hex chars).\n  const str = String(input);\n  const seeds = [0x811c9dc5, 0xcbf29ce4, 0xdeadbeef, 0xcafebabe,\n                 0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a];\n  let out = '';\n  for (let round = 0; round < 8; round++) {\n    let h = seeds[round];\n    for (let i = 0; i < str.length; i++) {\n      h ^= str.charCodeAt(i) + round;\n      h = Math.imul(h, 0x01000193) >>> 0;\n    }\n    out += h.toString(16).padStart(8, '0');\n  }\n  return out;\n}\nconst input = $input.first().json;\n\nconst obrigatorios = ['task_id', 'valor', 'metodo'];\nfor (const campo of obrigatorios) {\n  if (input[campo] === undefined || input[campo] === null || input[campo] === '') {\n    throw new Error(`Campo obrigatório ausente: ${campo}`);\n  }\n}\n\nconst metodosValidos = ['pix', 'boleto'];\nconst metodo = String(input.metodo).toLowerCase();\nif (!metodosValidos.includes(metodo)) {\n  throw new Error(`metodo inválido. Use: ${metodosValidos.join(', ')}`);\n}\n\nconst valorCentavos = Math.round(Number(input.valor) * 100);\nif (!Number.isFinite(valorCentavos) || valorCentavos <= 0) {\n  throw new Error('valor deve ser um número positivo.');\n}\n\nconst seedStr = `${input.task_id}|${metodo}|${valorCentavos}`;\nconst hash = __hashHex(seedStr);\nconst transactionId = `txn_${hash.slice(0, 24)}`;\n\nconst valorFmt = (valorCentavos / 100).toFixed(2);\nconst vencimento = DateTime.now().plus({ days: 3 }).toISODate();\n\nlet link_pagamento;\nlet instrucao;\nlet qr_code = null;\nlet boleto_linha = null;\n\nif (metodo === 'pix') {\n  qr_code = `00020126${hash.slice(0, 20).toUpperCase()}5204000053039865405${valorFmt}5802BR5915MOCK CORRETORA6009SAO PAULO62070503***6304${hash.slice(0, 4).toUpperCase()}`;\n  link_pagamento = `https://mock.corretora/pagar/pix/${transactionId}`;\n  instrucao = '💸 *Pagamento via PIX*\\n\\n' +\n    `Valor: R$ ${valorFmt}\\n` +\n    `Vencimento: ${vencimento}\\n\\n` +\n    `Chave PIX (copia e cola):\\n\\`\\`\\`\\n${qr_code}\\n\\`\\`\\`\\n\\n` +\n    `Ou pague pelo link: ${link_pagamento}`;\n} else {\n  boleto_linha = `34191.${hash.slice(0,5)}.${hash.slice(5,11)} ${hash.slice(11,16)}.${hash.slice(16,22)} ${hash.slice(22,28)}.${hash.slice(28,30)} 9 ${Math.floor(valorCentavos).toString().padStart(14,'0')}`;\n  link_pagamento = `https://mock.corretora/pagar/boleto/${transactionId}`;\n  instrucao = '💳 *Boleto gerado*\\n\\n' +\n    `Valor: R$ ${valorFmt}\\n` +\n    `Vencimento: ${vencimento}\\n\\n` +\n    `Linha digitável:\\n\\`\\`\\`\\n${boleto_linha}\\n\\`\\`\\`\\n\\n` +\n    `Download: ${link_pagamento}`;\n}\n\nreturn [{\n  json: {\n    transactionId,\n    metodo,\n    valor: Number(valorFmt),\n    vencimento,\n    link_pagamento,\n    qr_code,\n    boleto_linha,\n    instrucao_cliente: instrucao,\n    status: 'CONFIRMED',\n    descricao: input.descricao || `Mensalidade do plano de saúde`,\n    // No mock o pagamento é confirmado imediatamente.\n    paidAt: DateTime.now().toISO()\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        128
+      ],
+      "id": "97323e20-a507-4014-9946-4cf2389dc6c1",
+      "name": "Gerar cobrança (mock)"
+    },
+    {
+      "parameters": {
+        "content": "## 09. Pagamento (mock)\n\nSimula a criação de uma cobrança PIX ou boleto. Em produção, usar sua API de pagamentos preferida.\n\nRetorna:\n- `transactionId` (vai para o WF 05 Emitir)\n- `instrucao_cliente` (texto pronto para enviar no WhatsApp)\n- `link_pagamento`, `qr_code`, `boleto_linha`\n\n`transactionId` é determinístico por (task_id, metodo, valor) para facilitar testes.",
+        "height": 320,
+        "width": 550,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        16
+      ],
+      "id": "5c33f26b-9313-482d-9c6f-85e03bb99868",
+      "name": "Note principal"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanTask",
+        "operation": "update",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Gatilho').first().json.account_id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $('Gatilho').first().json.board_id }}",
+          "mode": "id"
+        },
+        "kanbanTaskId": {
+          "__rl": true,
+          "value": "={{ $('Gatilho').first().json.task_id }}",
+          "mode": "id"
+        },
+        "specifyCustomAttributesUpdate": "json",
+        "updateFields": {},
+        "customAttributesJsonUpdate": "={{ JSON.stringify({ ...($('Carregar tarefa').first().json.custom_attributes || {}), payment_transaction_id: $('Gerar cobrança (mock)').first().json.transactionId }) }}"
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        928,
+        128
+      ],
+      "id": "b1c2d3e4-5555-6666-7777-888899990000",
+      "name": "Salvar pagamento na tarefa",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r-pay-txn-0001",
+              "name": "transactionId",
+              "value": "={{ $('Gerar cobrança (mock)').item.json.transactionId }}",
+              "type": "string"
+            },
+            {
+              "id": "r-pay-met-0002",
+              "name": "metodo",
+              "value": "={{ $('Gerar cobrança (mock)').item.json.metodo }}",
+              "type": "string"
+            },
+            {
+              "id": "r-pay-val-0003",
+              "name": "valor",
+              "value": "={{ $('Gerar cobrança (mock)').item.json.valor }}",
+              "type": "number"
+            },
+            {
+              "id": "r-pay-vnc-0004",
+              "name": "vencimento",
+              "value": "={{ $('Gerar cobrança (mock)').item.json.vencimento }}",
+              "type": "string"
+            },
+            {
+              "id": "r-pay-lnk-0005",
+              "name": "link_pagamento",
+              "value": "={{ $('Gerar cobrança (mock)').item.json.link_pagamento }}",
+              "type": "string"
+            },
+            {
+              "id": "r-pay-qrc-0006",
+              "name": "qr_code",
+              "value": "={{ $('Gerar cobrança (mock)').item.json.qr_code }}",
+              "type": "string"
+            },
+            {
+              "id": "r-pay-bol-0007",
+              "name": "boleto_linha",
+              "value": "={{ $('Gerar cobrança (mock)').item.json.boleto_linha }}",
+              "type": "string"
+            },
+            {
+              "id": "r-pay-ins-0008",
+              "name": "instrucao_cliente",
+              "value": "={{ $('Gerar cobrança (mock)').item.json.instrucao_cliente }}",
+              "type": "string"
+            },
+            {
+              "id": "r-pay-sts-0009",
+              "name": "status",
+              "value": "={{ $('Gerar cobrança (mock)').item.json.status }}",
+              "type": "string"
+            },
+            {
+              "id": "r-pay-pdt-0010",
+              "name": "paidAt",
+              "value": "={{ $('Gerar cobrança (mock)').item.json.paidAt }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        128
+      ],
+      "id": "c1d2e3f4-aaaa-bbbb-cccc-dddddddddddd",
+      "name": "Resposta ao agente"
+    },
+    {
+      "parameters": {
+        "content": "[![fazer.ai](https://framerusercontent.com/images/HqY9djLTzyutSKnuLLqBr92KbM.png?scale-down-to=256)](https://fazer.ai?utm_source=n8n&utm_campaign=sec-v3)\n\n## Esse é um template faça você mesmo do canal\n## Lucas Moreira\n\n### Inscreva-se no nosso canal no YouTube\n[![YouTube Lucas Moreira](https://img.shields.io/youtube/channel/subscribers/UCtmp6SxzLscu0GRTbgM8FTw?style=flat-square&logo=youtube&label=Inscreva-se&color=f00)](https://youtube.com/@eulucassmoreira?si=0lH7hwX9pukjhmPQ)\n[![Instagram](https://img.shields.io/badge/instagram-black?logo=instagram&style=for-the-badge)](https://instagram.com/eulucassmoreira)\n[![GitHub fazer.ai](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white&label)](https://github.com/fazer-ai)\n",
+        "height": 472,
+        "width": 550,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        -464
+      ],
+      "id": "918cfc8c-4b85-409e-8974-1696b9f29e7a",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "## Quer entender como funciona?\n\n\n### Assista o vídeo, deixe um like, e se inscreva no canal para ter acesso a mais workflows como esse!\n\n[![Vídeo YouTube Kanban Clínicas](https://i1.ytimg.com/vi_webp/vYtaGw3vRII/maxresdefault.webp)](https://www.youtube.com/watch?v=vYtaGw3vRII)",
+        "height": 472,
+        "width": 596,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        144,
+        -464
+      ],
+      "id": "f775d53d-11a4-408c-89df-41f9d710b463",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "## [Clique aqui e entre agora para tirar suas dúvidas](https://lucasmoreira.ai)\n[![Banner comunidade](https://assets-v2.circle.so/voccie8o44ecsfpx7p8z1j9rze82)](https://lucasmoreira.ai)",
+        "height": 472,
+        "width": 1124,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        752,
+        -464
+      ],
+      "id": "0e561a50-2656-474a-b116-49ee58f882e6",
+      "name": "Sticky Note36"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanTask",
+        "operation": "get",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Gatilho').first().json.account_id }}",
+          "mode": "id"
+        },
+        "kanbanTaskId": {
+          "__rl": true,
+          "value": "={{ $('Gatilho').first().json.task_id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $('Gatilho').first().json.board_id }}",
+          "mode": "id"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        736,
+        128
+      ],
+      "id": "a9b1c2d3-2222-3333-4444-555566667777",
+      "name": "Carregar tarefa",
+      "credentials": {}
+    }
+  ],
+  "connections": {
+    "Gatilho": {
+      "main": [
+        [
+          {
+            "node": "Gerar cobrança (mock)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar cobrança (mock)": {
+      "main": [
+        [
+          {
+            "node": "Carregar tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar pagamento na tarefa": {
+      "main": [
+        [
+          {
+            "node": "Resposta ao agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Carregar tarefa": {
+      "main": [
+        [
+          {
+            "node": "Salvar pagamento na tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "active": false
+}

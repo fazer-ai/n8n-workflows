@@ -1,0 +1,882 @@
+{
+  "name": "00. Configurações IA Corretora",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        368,
+        2256
+      ],
+      "id": "13d159e9-ea83-4711-b69f-50302bf1b164",
+      "name": "Gatilho"
+    },
+    {
+      "parameters": {
+        "resource": "account",
+        "accountId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "<SELECIONE SUA CONTA>"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        704,
+        2256
+      ],
+      "id": "dc0cd9ea-9872-4ab4-95c4-f8840ef45d39",
+      "name": "Selecionar conta",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Tabela de histórico de mensagens (memória do agente)\nCREATE TABLE IF NOT EXISTS n8n_historico_mensagens (\n    id SERIAL PRIMARY KEY,\n    session_id VARCHAR(40) NOT NULL,\n    message JSONB NOT NULL,\n    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE INDEX IF NOT EXISTS idx_historico_session\n    ON n8n_historico_mensagens(session_id);\n\n-- Fila de mensagens (debounce)\nCREATE TABLE IF NOT EXISTS n8n_fila_mensagens (\n    id BIGSERIAL PRIMARY KEY,\n    id_mensagem VARCHAR(40) NOT NULL,\n    telefone VARCHAR(40) NOT NULL,\n    mensagem TEXT NOT NULL,\n    \"timestamp\" TIMESTAMP WITHOUT TIME ZONE NOT NULL\n);\nCREATE INDEX IF NOT EXISTS idx_fila_telefone\n    ON n8n_fila_mensagens(telefone);\n\n-- Status de atendimento (lock de concorrência)\nCREATE TABLE IF NOT EXISTS n8n_status_atendimento (\n    id SERIAL PRIMARY KEY,\n    session_id VARCHAR(40) UNIQUE NOT NULL,\n    lock_conversa BOOLEAN DEFAULT FALSE,\n    updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP\n);\nCREATE INDEX IF NOT EXISTS idx_status_session\n    ON n8n_status_atendimento(session_id);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1008,
+        1520
+      ],
+      "id": "ca36591e-0458-4ce7-87cd-c65298d21dce",
+      "name": "Configurar tabelas",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "505da86d-3578-43ff-a446-5569a2328142",
+              "name": "etiquetas",
+              "value": "=[\n  {\n    \"etiqueta\": \"testando-agente\",\n    \"cor\": \"#6BBF8A\",\n    \"descricao\": \"Habilita agente IA em modo teste\"\n  },\n  {\n    \"etiqueta\": \"agente-off\",\n    \"cor\": \"#E8735A\",\n    \"descricao\": \"Desabilita agente IA\"\n  }\n]",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        992,
+        1792
+      ],
+      "id": "57b67cdc-d622-4ec5-8844-1ac0f185e128",
+      "name": "Etiquetas"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "etiquetas",
+        "options": {
+          "destinationFieldName": "etiqueta"
+        }
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        1792
+      ],
+      "id": "91282b19-4c36-4dd8-99db-cb467074649d",
+      "name": "Split etiquetas"
+    },
+    {
+      "parameters": {
+        "resource": "label",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Selecionar conta').item.json.id }}",
+          "mode": "id"
+        },
+        "title": "={{ $json.etiqueta.etiqueta }}",
+        "additionalFields": {
+          "color": "={{ $json.etiqueta.cor }}",
+          "description": "={{ $json.etiqueta.descricao }}",
+          "show_on_sidebar": true
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        1792
+      ],
+      "id": "6e54cff0-baf9-47ec-ba2d-caab1fc65a7a",
+      "name": "Criar etiqueta",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "505da86d-3578-43ff-a446-5569a2328142",
+              "name": "atributos",
+              "value": "=[\n  {\n    \"chave\": \"cpf\",\n    \"nome_display\": \"CPF\",\n    \"tipo\": \"text\",\n    \"modelo\": \"contato\",\n    \"descricao\": \"CPF do titular (apenas números)\"\n  },\n  {\n    \"chave\": \"data_nascimento\",\n    \"nome_display\": \"Data de nascimento\",\n    \"tipo\": \"date\",\n    \"modelo\": \"contato\",\n    \"descricao\": \"Data de nascimento do titular (AAAA-MM-DD)\"\n  },\n  {\n    \"chave\": \"sexo\",\n    \"nome_display\": \"Sexo\",\n    \"tipo\": \"list\",\n    \"modelo\": \"contato\",\n    \"descricao\": \"Sexo do segurado (m / f) — fator de preço em seguro de vida\",\n    \"valores\": [\n      \"m\",\n      \"f\"\n    ]\n  },\n  {\n    \"chave\": \"profissao\",\n    \"nome_display\": \"Profissão\",\n    \"tipo\": \"text\",\n    \"modelo\": \"contato\",\n    \"descricao\": \"Profissão do titular (algumas categorias de risco alteram o prêmio)\"\n  },\n  {\n    \"chave\": \"cidade\",\n    \"nome_display\": \"Cidade\",\n    \"tipo\": \"text\",\n    \"modelo\": \"contato\",\n    \"descricao\": \"Cidade de residência\"\n  },\n  {\n    \"chave\": \"uf\",\n    \"nome_display\": \"UF\",\n    \"tipo\": \"text\",\n    \"modelo\": \"contato\",\n    \"descricao\": \"Unidade federativa (ex: SP)\"\n  },\n  {\n    \"chave\": \"consent_id_cotacao\",\n    \"nome_display\": \"ID da cotação (consentId)\",\n    \"tipo\": \"text\",\n    \"modelo\": \"tarefa\",\n    \"descricao\": \"Identificador OPIN-style da cotação realizada nesta tarefa\"\n  },\n  {\n    \"chave\": \"ramo\",\n    \"nome_display\": \"Ramo\",\n    \"tipo\": \"list\",\n    \"modelo\": \"tarefa\",\n    \"descricao\": \"Ramo do seguro (vida, saúde, auto, residencial, pet, viagem)\",\n    \"valores\": [\n      \"vida\",\n      \"saude\",\n      \"auto\",\n      \"residencial\",\n      \"pet\",\n      \"viagem\"\n    ]\n  },\n  {\n    \"chave\": \"plano_escolhido\",\n    \"nome_display\": \"Plano escolhido\",\n    \"tipo\": \"text\",\n    \"modelo\": \"tarefa\",\n    \"descricao\": \"Produto selecionado pelo cliente (ex: Bradesco Viver Bem Individual)\"\n  },\n  {\n    \"chave\": \"operadora\",\n    \"nome_display\": \"Operadora\",\n    \"tipo\": \"text\",\n    \"modelo\": \"tarefa\",\n    \"descricao\": \"Operadora do plano (ex: Bradesco, Icatu, MAG)\"\n  },\n  {\n    \"chave\": \"capital_morte\",\n    \"nome_display\": \"Capital de morte (R$)\",\n    \"tipo\": \"text\",\n    \"modelo\": \"tarefa\",\n    \"descricao\": \"Capital segurado para a cobertura de morte (em reais)\"\n  },\n  {\n    \"chave\": \"premio_mensal\",\n    \"nome_display\": \"Prêmio mensal (R$)\",\n    \"tipo\": \"text\",\n    \"modelo\": \"tarefa\",\n    \"descricao\": \"Mensalidade do plano contratado\"\n  },\n  {\n    \"chave\": \"fumante\",\n    \"nome_display\": \"Fumante\",\n    \"tipo\": \"list\",\n    \"modelo\": \"tarefa\",\n    \"descricao\": \"Informou ser fumante na cotação\",\n    \"valores\": [\n      \"sim\",\n      \"nao\"\n    ]\n  },\n  {\n    \"chave\": \"beneficiarios_resumo\",\n    \"nome_display\": \"Beneficiários\",\n    \"tipo\": \"text\",\n    \"modelo\": \"tarefa\",\n    \"descricao\": \"Lista resumida de beneficiários (nome + parentesco + %)\"\n  },\n  {\n    \"chave\": \"numero_apolice\",\n    \"nome_display\": \"Número da apólice\",\n    \"tipo\": \"text\",\n    \"modelo\": \"tarefa\",\n    \"descricao\": \"Número da apólice emitida\"\n  },\n  {\n    \"chave\": \"data_vigencia\",\n    \"nome_display\": \"Data de vigência\",\n    \"tipo\": \"date\",\n    \"modelo\": \"tarefa\",\n    \"descricao\": \"Data de início da vigência da apólice\"\n  },\n  {\n    \"chave\": \"data_renovacao\",\n    \"nome_display\": \"Data de renovação\",\n    \"tipo\": \"date\",\n    \"modelo\": \"tarefa\",\n    \"descricao\": \"Data prevista para renovação\"\n  },\n  {\n    \"chave\": \"numero_sinistro\",\n    \"nome_display\": \"Número do sinistro\",\n    \"tipo\": \"text\",\n    \"modelo\": \"tarefa\",\n    \"descricao\": \"Número do sinistro aberto na seguradora\"\n  },\n  {\n    \"chave\": \"tipo_sinistro\",\n    \"nome_display\": \"Tipo do sinistro\",\n    \"tipo\": \"text\",\n    \"modelo\": \"tarefa\",\n    \"descricao\": \"Tipo do sinistro (ex: morte, invalidez, vazamento, colisão)\"\n  },\n  {\n    \"chave\": \"original_quote_request\",\n    \"nome_display\": \"Original quote request (JSON)\",\n    \"tipo\": \"text\",\n    \"modelo\": \"tarefa\",\n    \"descricao\": \"Payload OPIN original da cotação, serializado em JSON. Reutilizado na emissão (mock stateless).\"\n  },\n  {\n    \"chave\": \"idempotency_key\",\n    \"nome_display\": \"Idempotency key da cotação\",\n    \"tipo\": \"text\",\n    \"modelo\": \"tarefa\",\n    \"descricao\": \"Chave de idempotência enviada no header x-idempotency-key. Precisa casar entre /request e /accept.\"\n  },\n  {\n    \"chave\": \"operadora_codigo\",\n    \"nome_display\": \"Código da operadora escolhida\",\n    \"tipo\": \"text\",\n    \"modelo\": \"tarefa\",\n    \"descricao\": \"Código da operadora que o cliente escolheu (BRD, ICA, MAG). Salvo pela IA quando o cliente decide.\"\n  },\n  {\n    \"chave\": \"payment_transaction_id\",\n    \"nome_display\": \"ID da transação de pagamento\",\n    \"tipo\": \"text\",\n    \"modelo\": \"tarefa\",\n    \"descricao\": \"transactionId retornado pelo gateway/mock de pagamento. Usado na emissão.\"\n  }\n]",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        992,
+        1968
+      ],
+      "id": "3e0895c2-1791-4b37-96ed-f58f921b10ae",
+      "name": "Atributos customizados"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "atributos",
+        "options": {
+          "destinationFieldName": "atributo"
+        }
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        1968
+      ],
+      "id": "3961f3fa-98b9-4212-b595-9e6670e4f79b",
+      "name": "Split atributos"
+    },
+    {
+      "parameters": {
+        "resource": "customAttribute",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Selecionar conta').item.json.id }}",
+          "mode": "id"
+        },
+        "attributeModel": "={{ ({ conversa: 'conversation_attribute', contato: 'contact_attribute', tarefa: 'task_attribute' })[$json.atributo.modelo] }}",
+        "attributeDisplayName": "={{ $json.atributo.nome_display }}",
+        "attributeType": "={{ $json.atributo.tipo }}",
+        "additionalFields": {
+          "attributeDescription": "={{ $json.atributo.descricao }}",
+          "attributeKey": "={{ $json.atributo.chave }}",
+          "attributeValues": "={{ $json.atributo.valores?.toJsonString() }}"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        1968
+      ],
+      "id": "eec59f34-c993-40a9-950a-95e5f2936cb8",
+      "name": "Criar atributo",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanBoard",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "name": "Corretora de Seguros",
+        "currency": "BRL",
+        "automations": {
+          "settings": {}
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        976,
+        2256
+      ],
+      "id": "a8e50839-2421-4eaf-ac58-6927b1d7b4c9",
+      "name": "Criar funil",
+      "credentials": {},
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1184,
+        2448
+      ],
+      "id": "6b8d62ed-d937-4b17-9033-aba868c3006a",
+      "name": "Funil já criado"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "87e19aff-212f-4068-92d6-bd3d6d45de78",
+              "name": "id_funil",
+              "value": "={{ $('Criar funil').item.json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "505da86d-3578-43ff-a446-5569a2328142",
+              "name": "etapas",
+              "value": "=[\n  { \"etapa\": \"Novo Lead\", \"cor\": \"#5B9BD5\", \"descricao\": \"Primeiro contato\" },\n  { \"etapa\": \"Cotação Solicitada\", \"cor\": \"#F39C12\", \"descricao\": \"IA coletando dados e cotando na(s) seguradora(s)\" },\n  { \"etapa\": \"Proposta Enviada\", \"cor\": \"#9B7ED8\", \"descricao\": \"Opções enviadas ao cliente, aguardando decisão\" },\n  { \"etapa\": \"Aprovada\", \"cor\": \"#5CC0C7\", \"descricao\": \"Cliente aprovou plano e forma de pagamento\" },\n  { \"etapa\": \"Apólice Emitida\", \"cor\": \"#3A8F5C\", \"descricao\": \"Emitida na seguradora, aguardando assinatura/pagamento final\" },\n  { \"etapa\": \"Assinada\", \"cor\": \"#2E7D32\", \"descricao\": \"Cliente assinou e pagou, apólice ativa\" },\n  { \"etapa\": \"Perdido\", \"cor\": \"#A0A0A0\", \"descricao\": \"Cliente desistiu ou foi para o concorrente\", \"perdida\": true },\n  { \"etapa\": \"Renovação\", \"cor\": \"#F4C542\", \"descricao\": \"Janela de renovação aberta (60 dias antes do vencimento)\" }\n]",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1184,
+        2256
+      ],
+      "id": "8f71c49f-70a1-4424-ad4b-c1c71d99fa64",
+      "name": "Etapas"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "etapas",
+        "options": {
+          "destinationFieldName": "etapa"
+        }
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        2256
+      ],
+      "id": "63a70c33-0c9c-49f0-bad1-91b2b31abd1d",
+      "name": "Split etapas"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanStep",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Selecionar conta').item.json.id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $('Etapas').item.json.id_funil }}",
+          "mode": "id"
+        },
+        "name": "={{ $json.etapa.etapa }}",
+        "additionalFields": {
+          "color": "={{ $json.etapa.cor }}",
+          "description": "={{ $json.etapa.descricao }}"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        2256
+      ],
+      "id": "956f14ed-6ca6-4c18-b39d-61bc89ff596c",
+      "name": "Criar etapa",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "99581fa6-0cfa-450c-a5e1-eb9eaa252055",
+              "leftValue": "={{ $('Split etapas').item.json.etapa.perdida }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1776,
+        2256
+      ],
+      "id": "1091d8ec-9b5d-4b3e-a9df-e9d6f922b70b",
+      "name": "Perdida?"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanStep",
+        "operation": "update",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Selecionar conta').item.json.id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $('Criar funil').item.json.id }}",
+          "mode": "id"
+        },
+        "kanbanStepId": {
+          "__rl": true,
+          "value": "={{ $('Criar etapa').item.json.id }}",
+          "mode": "id"
+        },
+        "updateStepFields": {
+          "cancelled": true
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        2256
+      ],
+      "id": "d12ae580-530c-43e2-8ca8-0877c7bf1b7e",
+      "name": "Atualizar etapa perdida",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "content": "## Criar tabelas Postgres\n\nMemória do agente, debounce e lock de concorrência.",
+        "height": 280,
+        "width": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        912,
+        1424
+      ],
+      "id": "d5b66d21-5643-4278-96b6-e30b3fdfa5fe",
+      "name": "Note Postgres"
+    },
+    {
+      "parameters": {
+        "content": "## Etiquetas + atributos customizados\n\nEtiquetas controlam quando a IA responde. Atributos guardam dados do segurado e da apólice direto no contato / conversa.",
+        "height": 432,
+        "width": 752,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        912,
+        1712
+      ],
+      "id": "d526f00f-a87b-499d-9136-6c03119e76dd",
+      "name": "Note Etiquetas"
+    },
+    {
+      "parameters": {
+        "content": "## Funil Kanban da Corretora\n\n8 etapas do primeiro contato até renovação. Sinistros rodam em funil paralelo separado (abaixo).",
+        "height": 432,
+        "width": 1312,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        912,
+        2160
+      ],
+      "id": "b1d869c0-f811-4337-ac6d-4c48bb12ea83",
+      "name": "Note Funil"
+    },
+    {
+      "parameters": {
+        "content": "# Checklist\n- [ ] Instalar community node @fazer-ai/n8n-nodes-chatwoot\n- [ ] Credenciais: Postgres + Chatwoot + PDFShift\n- [ ] Selecionar conta certa no node \"Selecionar conta\"\n- [ ] Executar o workflow (Gatilho manual)\n- [ ] Associar agentes e caixas de entrada ao novo funil",
+        "height": 280,
+        "width": 416,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        1424
+      ],
+      "id": "3cc0d12c-3427-4660-a6f8-c25817b3a653",
+      "name": "Note Checklist"
+    },
+    {
+      "parameters": {
+        "content": "## PDFShift\n\nUsado pelo WF 03 para gerar o PDF da proposta. Free tier: 50 PDFs/mês.\n\n### 1. Criar conta + pegar API key\n\n1. Cria conta em [pdfshift.io/register](https://pdfshift.io/register)\n2. A API key já é gerada automaticamente — copia ela em [app.pdfshift.io/env/apikeys](https://app.pdfshift.io/env/apikeys)\n\n### 2. Criar credencial no n8n\n\nCria credencial do tipo **Header Auth** chamada `PDFShift`:\n- **Name**: `X-API-Key`\n- **Value**: a API key copiada acima\n\nAssocia ao node **Validar PDFShift** abaixo e também ao **Gerar PDF (PDFShift)** do WF 03.\n\n### 3. Validar\n\n`GET /v3/account` não consome créditos — roda esse trecho para confirmar que a credencial está OK.",
+        "height": 528,
+        "width": 608,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        912,
+        3056
+      ],
+      "id": "f7a1b2c3-d4e5-6789-abcd-ef0123456789",
+      "name": "Note PDFShift"
+    },
+    {
+      "parameters": {
+        "url": "https://api.pdfshift.io/v3/account",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1152,
+        3440
+      ],
+      "id": "e1d2c3b4-a596-4877-8123-0987654321ab",
+      "name": "Validar PDFShift",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanBoard",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Selecionar conta').item.json.id }}",
+          "mode": "id"
+        },
+        "name": "Sinistros",
+        "currency": "BRL",
+        "automations": {
+          "settings": {
+            "auto_resolve_conversation_on_task_end": false,
+            "sync_task_and_conversation_agents": false
+          }
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        976,
+        2704
+      ],
+      "id": "ef134723-1bfb-4fb2-889b-0b71c21b9782",
+      "name": "Criar funil Sinistros",
+      "credentials": {},
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1184,
+        2896
+      ],
+      "id": "43a3917d-96cf-49e8-8324-942d36c387e8",
+      "name": "Funil Sinistros já criado"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9f6c2546-8670-4fa7-98d6-998b2f3f4698",
+              "name": "id_funil",
+              "value": "={{ $('Criar funil Sinistros').item.json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "c366d9fa-7b51-40f5-833e-5d58d1384e1b",
+              "name": "etapas",
+              "value": "=[\n  { \"etapa\": \"Aberto\", \"cor\": \"#E8735A\", \"descricao\": \"Cliente acabou de acionar o sinistro, coletando informações iniciais\" },\n  { \"etapa\": \"Documentação\", \"cor\": \"#F39C12\", \"descricao\": \"Aguardando documentos do cliente (laudos, BO, notas, etc)\" },\n  { \"etapa\": \"Em Análise\", \"cor\": \"#5CC0C7\", \"descricao\": \"Enviado para a seguradora, aguardando parecer\" },\n  { \"etapa\": \"Perícia / Vistoria\", \"cor\": \"#9B7ED8\", \"descricao\": \"Perícia ou vistoria agendada ou em andamento\" },\n  { \"etapa\": \"Aprovado\", \"cor\": \"#3A8F5C\", \"descricao\": \"Seguradora aprovou, aguardando pagamento da indenização\" },\n  { \"etapa\": \"Pago\", \"cor\": \"#2E7D32\", \"descricao\": \"Indenização paga ao cliente ou beneficiário\" },\n  { \"etapa\": \"Negado\", \"cor\": \"#A0A0A0\", \"descricao\": \"Seguradora negou — precisa contestar ou encerrar\", \"perdida\": true },\n  { \"etapa\": \"Encerrado\", \"cor\": \"#6B7280\", \"descricao\": \"Sinistro finalizado (após pagamento ou negação assumida)\" }\n]",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1184,
+        2704
+      ],
+      "id": "d566011b-35ee-4ac5-aa19-d504a503b708",
+      "name": "Etapas Sinistros"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "etapas",
+        "options": {
+          "destinationFieldName": "etapa"
+        }
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        2704
+      ],
+      "id": "b90e65ca-4d38-498e-bc7a-a5177338a90a",
+      "name": "Split etapas Sinistros"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanStep",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Selecionar conta').item.json.id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $('Etapas Sinistros').item.json.id_funil }}",
+          "mode": "id"
+        },
+        "name": "={{ $json.etapa.etapa }}",
+        "additionalFields": {
+          "color": "={{ $json.etapa.cor }}",
+          "description": "={{ $json.etapa.descricao }}"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        2704
+      ],
+      "id": "aef243fd-82a6-4f5c-a938-8460c43152db",
+      "name": "Criar etapa Sinistros",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c8db12cf-118c-46e0-aaea-5657894eec37",
+              "leftValue": "={{ $('Split etapas Sinistros').item.json.etapa.perdida }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1776,
+        2704
+      ],
+      "id": "182910e7-5a30-4506-a4f9-37fd98158f65",
+      "name": "Perdida Sinistros?"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanStep",
+        "operation": "update",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $('Selecionar conta').item.json.id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $('Criar funil Sinistros').item.json.id }}",
+          "mode": "id"
+        },
+        "kanbanStepId": {
+          "__rl": true,
+          "value": "={{ $('Criar etapa Sinistros').item.json.id }}",
+          "mode": "id"
+        },
+        "updateStepFields": {
+          "cancelled": true
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        2704
+      ],
+      "id": "fa30ce3e-dd84-41a7-9e99-196721e450ca",
+      "name": "Atualizar etapa perdida Sinistros",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "content": "## Funil paralelo: Sinistros\n\nTask de venda/renovação e sinistro rodam em boards separados — cliente pode ter uma apólice ativa e um sinistro em andamento ao mesmo tempo. Etapas seguem o ciclo real: Aberto → Documentação → Análise → Perícia → Aprovado/Negado → Pago/Encerrado.",
+        "height": 440,
+        "width": 1312,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        912,
+        2608
+      ],
+      "id": "3ed8d896-fcf6-4b09-97f3-26f48aebfb49",
+      "name": "Note funil sinistros"
+    }
+  ],
+  "connections": {
+    "Gatilho": {
+      "main": [
+        [
+          {
+            "node": "Configurar tabelas",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Selecionar conta",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Validar PDFShift",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Selecionar conta": {
+      "main": [
+        [
+          {
+            "node": "Etiquetas",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Atributos customizados",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Criar funil",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Criar funil Sinistros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Etiquetas": {
+      "main": [
+        [
+          {
+            "node": "Split etiquetas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split etiquetas": {
+      "main": [
+        [
+          {
+            "node": "Criar etiqueta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atributos customizados": {
+      "main": [
+        [
+          {
+            "node": "Split atributos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split atributos": {
+      "main": [
+        [
+          {
+            "node": "Criar atributo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar funil": {
+      "main": [
+        [
+          {
+            "node": "Etapas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Funil já criado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Etapas": {
+      "main": [
+        [
+          {
+            "node": "Split etapas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split etapas": {
+      "main": [
+        [
+          {
+            "node": "Criar etapa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar etapa": {
+      "main": [
+        [
+          {
+            "node": "Perdida?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perdida?": {
+      "main": [
+        [
+          {
+            "node": "Atualizar etapa perdida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar funil Sinistros": {
+      "main": [
+        [
+          {
+            "node": "Etapas Sinistros",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Funil Sinistros já criado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Etapas Sinistros": {
+      "main": [
+        [
+          {
+            "node": "Split etapas Sinistros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split etapas Sinistros": {
+      "main": [
+        [
+          {
+            "node": "Criar etapa Sinistros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar etapa Sinistros": {
+      "main": [
+        [
+          {
+            "node": "Perdida Sinistros?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perdida Sinistros?": {
+      "main": [
+        [
+          {
+            "node": "Atualizar etapa perdida Sinistros",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}

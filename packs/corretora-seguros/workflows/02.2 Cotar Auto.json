@@ -1,0 +1,462 @@
+{
+  "name": "02.2 Cotar Auto",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "account_id",
+              "type": "number"
+            },
+            {
+              "name": "conversation_id",
+              "type": "number"
+            },
+            {
+              "name": "task_id",
+              "type": "number"
+            },
+            {
+              "name": "board_id",
+              "type": "number"
+            },
+            {
+              "name": "placa"
+            },
+            {
+              "name": "marca"
+            },
+            {
+              "name": "modelo"
+            },
+            {
+              "name": "ano_modelo",
+              "type": "number"
+            },
+            {
+              "name": "combustivel"
+            },
+            {
+              "name": "categoria"
+            },
+            {
+              "name": "chassi"
+            },
+            {
+              "name": "condutor_cpf"
+            },
+            {
+              "name": "condutor_data_nascimento"
+            },
+            {
+              "name": "condutor_sexo"
+            },
+            {
+              "name": "cnh_desde"
+            },
+            {
+              "name": "estado_civil"
+            },
+            {
+              "name": "uso_principal"
+            },
+            {
+              "name": "cep"
+            },
+            {
+              "name": "cidade"
+            },
+            {
+              "name": "uso_comercial",
+              "type": "boolean"
+            },
+            {
+              "name": "garagem",
+              "type": "boolean"
+            },
+            {
+              "name": "tipo_cobertura"
+            },
+            {
+              "name": "franquia_perfil"
+            },
+            {
+              "name": "rcf_materiais",
+              "type": "number"
+            },
+            {
+              "name": "rcf_corporais",
+              "type": "number"
+            },
+            {
+              "name": "app_capital",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        160,
+        144
+      ],
+      "id": "aad0c126-7f1c-4f1a-b050-8accf7af1562",
+      "name": "Gatilho"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanTask",
+        "operation": "get",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $json.account_id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $json.board_id }}",
+          "mode": "id"
+        },
+        "kanbanTaskId": {
+          "__rl": true,
+          "value": "={{ $json.task_id }}",
+          "mode": "id"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        352,
+        144
+      ],
+      "id": "f75e449a-eb8e-4601-b2c2-f0842b743a69",
+      "name": "Carregar tarefa",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Monta payload OPIN-style para a seguradora de auto.\n *\n * Esquema esperado pelo mock:\n *   data: {\n *     veiculo: { placa, chassi?, marca, modelo, anoModelo, combustivel, categoria },\n *     condutor: { cpf, dataNascimento, sexo, cnhDesde, estadoCivil, usoPrincipal },\n *     localizacao: { cep, cidade, usoComercial, garagem },\n *     cobertura: { tipo, franquiaPerfil, rcfMateriais?, rcfCorporais?, appCapital? }\n *   }\n */\n\nconst input = $('Gatilho').first().json;\n\nconst obrigatorios = [\n  'placa', 'ano_modelo', 'condutor_cpf', 'condutor_data_nascimento',\n  'condutor_sexo', 'cep', 'tipo_cobertura'\n];\nfor (const campo of obrigatorios) {\n  if (input[campo] === undefined || input[campo] === null || input[campo] === '') {\n    throw new Error(`Campo obrigatório ausente: ${campo}`);\n  }\n}\n\nconst dataNasc = DateTime.fromISO(input.condutor_data_nascimento);\nif (!dataNasc.isValid) {\n  throw new Error('condutor_data_nascimento inválida. Esperado AAAA-MM-DD.');\n}\n\nconst sexoNorm = String(input.condutor_sexo).toLowerCase().charAt(0);\nif (!['m', 'f'].includes(sexoNorm)) {\n  throw new Error('condutor_sexo inválido. Use \"m\" ou \"f\".');\n}\n\nconst anoModelo = Number(input.ano_modelo);\nif (!Number.isFinite(anoModelo) || anoModelo < 1980 || anoModelo > 2100) {\n  throw new Error('ano_modelo inválido.');\n}\n\nconst tipoCob = String(input.tipo_cobertura).toLowerCase();\nif (!['compreensiva', 'rcf', 'app', 'basica'].includes(tipoCob)) {\n  throw new Error('tipo_cobertura deve ser \"compreensiva\", \"rcf\", \"app\" ou \"basica\".');\n}\n\nconst idempotencyKey = input.idempotency_key || `task-${input.task_id}`;\n\nconst payload = {\n  data: {\n    veiculo: {\n      placa: String(input.placa).toUpperCase().replace(/[^A-Z0-9]/g, ''),\n      chassi: String(input.chassi ?? '').toUpperCase().replace(/[^A-Z0-9]/g, ''),\n      marca: String(input.marca ?? '').toLowerCase(),\n      modelo: String(input.modelo ?? '').toLowerCase(),\n      anoModelo,\n      combustivel: String(input.combustivel ?? 'flex').toLowerCase(),\n      categoria: String(input.categoria ?? 'passeio').toLowerCase(),\n    },\n    condutor: {\n      cpf: String(input.condutor_cpf).replace(/\\D/g, ''),\n      dataNascimento: String(input.condutor_data_nascimento).slice(0, 10),\n      sexo: sexoNorm,\n      cnhDesde: input.cnh_desde ? String(input.cnh_desde).slice(0, 10) : null,\n      estadoCivil: String(input.estado_civil ?? 'solteiro').toLowerCase(),\n      usoPrincipal: String(input.uso_principal ?? 'particular').toLowerCase(),\n    },\n    localizacao: {\n      cep: String(input.cep).replace(/\\D/g, ''),\n      cidade: String(input.cidade ?? '').toLowerCase(),\n      usoComercial: Boolean(input.uso_comercial ?? false),\n      garagem: Boolean(input.garagem ?? true),\n    },\n    cobertura: {\n      tipo: tipoCob,\n      franquiaPerfil: String(input.franquia_perfil ?? 'normal').toLowerCase(),\n      rcfMateriais: Number(input.rcf_materiais ?? 0) || 0,\n      rcfCorporais: Number(input.rcf_corporais ?? 0) || 0,\n      appCapital: Number(input.app_capital ?? 0) || 0,\n    }\n  }\n};\n\nreturn [{\n  json: { payload, idempotencyKey, task_id: input.task_id, account_id: input.account_id, conversation_id: input.conversation_id, board_id: input.board_id }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        144
+      ],
+      "id": "68abee11-d9e6-46b0-89c8-3f311f8c53fc",
+      "name": "Montar payload"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "<SUA URL N8N>/webhook/quote-auto/request",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-idempotency-key",
+              "value": "={{ $json.idempotencyKey }}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.payload.toJsonString() }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        144
+      ],
+      "id": "70a70e84-b8cd-4f9a-8eb0-82016e22172e",
+      "name": "Chamar seguradora (mock)"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Normaliza a resposta da seguradora de auto e guarda o payload original\n * para emissão stateless depois.\n */\nconst resposta = $input.first().json;\n\nif (!resposta || !resposta.data) {\n  throw new Error('Resposta inesperada da seguradora: ' + JSON.stringify(resposta).slice(0, 300));\n}\n\nconst { consentId, planos, validadeDias } = resposta.data;\n\nconst valorEstimadoAnual = planos.length > 0\n  ? Math.round(planos.reduce((sum, p) => sum + (p.premio?.anual || 0), 0) / planos.length)\n  : 0;\nconst disclaimer = resposta.meta?.disclaimer;\n\nconst input = $('Gatilho').first().json;\nconst montarPayload = $('Montar payload').first().json;\nconst payloadOriginal = montarPayload.payload;\nconst idempotencyKey = montarPayload.idempotencyKey;\n\nfunction formatBRL(v) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }\n\nfunction labelCobertura(c) {\n  const map = {\n    compreensiva: 'Compreensiva (casco + RCF + APP)',\n    rcf: 'Responsabilidade civil facultativa',\n    app: 'Acidentes pessoais de passageiros',\n    basica: 'Básica',\n    rcf_materiais: 'RCF danos materiais',\n    rcf_corporais: 'RCF danos corporais',\n    app_acidentes_pessoais: 'APP — acidentes pessoais'\n  };\n  const nome = map[c.tipo] ?? c.tipo;\n  if (c.valorFipeSimulado !== undefined) {\n    return `  · ${nome} — FIPE: ${formatBRL(c.valorFipeSimulado)} / Franquia: ${formatBRL(c.franquia)}`;\n  }\n  if (c.capital !== undefined) return `  · ${nome}: ${formatBRL(c.capital)}`;\n  return `  · ${nome}`;\n}\n\nconst resumoTexto = planos.map((p, i) => {\n  const linhas = [\n    `*Opção ${i + 1}: ${p.produto.nome}*`,\n    `  Mensalidade: ${formatBRL(p.premio.mensal)}  ·  Anual: ${formatBRL(p.premio.anual)}`,\n    `  Coberturas:`\n  ];\n  p.coberturas.forEach(c => linhas.push(labelCobertura(c)));\n  if (p.assistencia24h?.length) linhas.push(`  Assistência 24h: ${p.assistencia24h.join(', ')}`);\n  return linhas.join('\\n');\n}).join('\\n\\n');\n\nreturn [{\n  json: {\n    consentId,\n    validadeDias,\n    planos,\n    disclaimer,\n    resumo_texto: resumoTexto,\n    task_id: input.task_id,\n    account_id: input.account_id,\n    board_id: input.board_id,\n    idempotency_key: idempotencyKey,\n    original_quote_request: payloadOriginal.data,\n    valor_estimado_anual: valorEstimadoAnual\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        144
+      ],
+      "id": "3a97a952-0daa-4f46-ab44-02a84b3352ad",
+      "name": "Processar resposta"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanTask",
+        "operation": "update",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $json.account_id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $json.board_id }}",
+          "mode": "id"
+        },
+        "kanbanTaskId": {
+          "__rl": true,
+          "value": "={{ $json.task_id }}",
+          "mode": "id"
+        },
+        "specifyCustomAttributesUpdate": "json",
+        "updateFields": {
+          "board_step_id": {
+            "__rl": true,
+            "value": "={{ $('Carregar tarefa').first().json.board.steps.find(s => s.name === 'Cotação Solicitada').id }}",
+            "mode": "id"
+          },
+          "value": "={{ $json.valor_estimado_anual }}"
+        },
+        "customAttributesJsonUpdate": "={{ JSON.stringify({ ...($('Carregar tarefa').first().json.custom_attributes || {}), consent_id_cotacao: $json.consentId, ramo: 'auto', idempotency_key: $json.idempotency_key, original_quote_request: JSON.stringify($json.original_quote_request) }) }}"
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        144
+      ],
+      "id": "e8d5955d-c6db-41e6-be25-ec47840256db",
+      "name": "Salvar cotação na tarefa",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r-consent-id-0001",
+              "name": "consentId",
+              "value": "={{ $('Processar resposta').item.json.consentId }}",
+              "type": "string"
+            },
+            {
+              "id": "r-validade-0002",
+              "name": "validadeDias",
+              "value": "={{ $('Processar resposta').item.json.validadeDias }}",
+              "type": "number"
+            },
+            {
+              "id": "r-planos-0003",
+              "name": "planos",
+              "value": "={{ $('Processar resposta').item.json.planos }}",
+              "type": "array"
+            },
+            {
+              "id": "r-resumo-0004",
+              "name": "resumo_cliente",
+              "value": "={{ $('Processar resposta').item.json.resumo_texto }}",
+              "type": "string"
+            },
+            {
+              "id": "r-discl-0005",
+              "name": "disclaimer",
+              "value": "={{ $('Processar resposta').item.json.disclaimer }}",
+              "type": "string"
+            },
+            {
+              "id": "r-oqr-0006",
+              "name": "original_quote_request",
+              "value": "={{ $('Processar resposta').item.json.original_quote_request }}",
+              "type": "object"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1312,
+        144
+      ],
+      "id": "63839f04-5c96-4619-b27b-ee8ab8e3e4dd",
+      "name": "Resposta ao agente"
+    },
+    {
+      "parameters": {
+        "content": "## Integração com a seguradora\n\nEnvelope OPIN-style (`{data: {...}}`). CPF, CEP e percentuais normalizados no Code node. O `x-idempotency-key` amarrado à tarefa garante que retentativas na mesma tarefa retornam o mesmo `consentId` e os mesmos preços.",
+        "height": 180,
+        "width": 432,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        16
+      ],
+      "id": "c8c4e73f-abb3-47fe-bf2d-0e326f7a3455",
+      "name": "Note mock"
+    },
+    {
+      "parameters": {
+        "content": "## Persistir e responder\n\n- `consentId` + `ramo=vida` ficam na tarefa.\n- `original_quote_request` volta ao agente para ser salvo na descrição e reenviado ao mock na emissão (validação stateless).",
+        "height": 164,
+        "width": 432,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        208
+      ],
+      "id": "8a2b2b8a-3739-4d43-b470-8e87e85b25f8",
+      "name": "Note persistencia"
+    },
+    {
+      "parameters": {
+        "content": "## Quer entender como funciona?\n\n\n### Assista o vídeo, deixe um like, e se inscreva no canal para ter acesso a mais workflows como esse!\n\n[![Vídeo YouTube Kanban Clínicas](https://i1.ytimg.com/vi_webp/vYtaGw3vRII/maxresdefault.webp)](https://www.youtube.com/watch?v=vYtaGw3vRII)",
+        "height": 472,
+        "width": 596,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        144,
+        -464
+      ],
+      "id": "40db7cce-4ccf-41c0-a99a-66e559cd3b5e",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "## [Clique aqui e entre agora para tirar suas dúvidas](https://lucasmoreira.ai)\n[![Banner comunidade](https://assets-v2.circle.so/voccie8o44ecsfpx7p8z1j9rze82)](https://lucasmoreira.ai)",
+        "height": 472,
+        "width": 1124,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        752,
+        -464
+      ],
+      "id": "f350d108-0f87-4d86-ae09-55818ea63198",
+      "name": "Sticky Note36"
+    },
+    {
+      "parameters": {
+        "content": "[![fazer.ai](https://framerusercontent.com/images/HqY9djLTzyutSKnuLLqBr92KbM.png?scale-down-to=256)](https://fazer.ai?utm_source=n8n&utm_campaign=sec-v3)\n\n## Esse é um template faça você mesmo do canal\n## Lucas Moreira\n\n### Inscreva-se no nosso canal no YouTube\n[![YouTube Lucas Moreira](https://img.shields.io/youtube/channel/subscribers/UCtmp6SxzLscu0GRTbgM8FTw?style=flat-square&logo=youtube&label=Inscreva-se&color=f00)](https://youtube.com/@eulucassmoreira?si=0lH7hwX9pukjhmPQ)\n[![Instagram](https://img.shields.io/badge/instagram-black?logo=instagram&style=for-the-badge)](https://instagram.com/eulucassmoreira)\n[![GitHub fazer.ai](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white&label)](https://github.com/fazer-ai)\n",
+        "height": 472,
+        "width": 550,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        -464
+      ],
+      "id": "6083a37e-e558-4200-8b11-6b25e4dfa7c3",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "## 02. Cotar Auto\n\nChama a API da seguradora (mock) e retorna 3 opções de plano de vida.\n\n**Entradas esperadas** (do Agente):\n- `account_id`, `conversation_id`, `task_id`\n- `cpf`, `data_nascimento` (AAAA-MM-DD), `sexo` (m/f), `fumante` (bool), `profissao`\n- `cep`\n- `beneficiarios` — array `[{nome, parentesco, percentual}]`, soma = 100\n- `capital_morte` (R$)\n- Capitais adicionais opcionais (invalidez acidente/doença, doenças graves, auxílio funeral, diária)\n- `prazo` (default: anualRenovavel)",
+        "height": 360,
+        "width": 550,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        16
+      ],
+      "id": "0b56a2e9-59a2-4345-ac9c-450ef4643aec",
+      "name": "Note principal"
+    }
+  ],
+  "connections": {
+    "Gatilho": {
+      "main": [
+        [
+          {
+            "node": "Carregar tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Carregar tarefa": {
+      "main": [
+        [
+          {
+            "node": "Montar payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar payload": {
+      "main": [
+        [
+          {
+            "node": "Chamar seguradora (mock)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chamar seguradora (mock)": {
+      "main": [
+        [
+          {
+            "node": "Processar resposta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processar resposta": {
+      "main": [
+        [
+          {
+            "node": "Salvar cotação na tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar cotação na tarefa": {
+      "main": [
+        [
+          {
+            "node": "Resposta ao agente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}

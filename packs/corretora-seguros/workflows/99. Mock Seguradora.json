@@ -1,0 +1,787 @@
+{
+  "name": "99. Mock Seguradora",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 99. Mock Seguradora\n\nAPI fictícia multi-ramo (Vida e Auto) no estilo OPIN, com:\n\n**Vida**\n- `POST /webhook/quote-life/request` → cotação determinística (mesmo input sempre devolve os mesmos 3 planos)\n- `PATCH /webhook/quote-life/accept` → emissão stateless (cliente reenvia `originalQuoteRequest`, mock recomputa o hash e valida)\n\n**Auto**\n- `POST /webhook/quote-auto/request` → cotação determinística (mesmo input sempre devolve os mesmos 3 planos)\n- `PATCH /webhook/quote-auto/accept` → emissão stateless\n\n**Seguros no Brasil são regulados pela SUSEP**, não pelo OPIN (que é bancário). Aqui usamos o mesmo estilo de envelope e consentId do OPIN só porque é uma convenção boa. Em produção, trocar pelos endpoints reais das seguradoras parceiras.",
+        "height": 384,
+        "width": 550,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        16
+      ],
+      "id": "348d4f32-50c3-46ed-9a1d-9b864c8c4793",
+      "name": "Sobre este workflow"
+    },
+    {
+      "parameters": {
+        "content": "### Cotação\n\nNormaliza o payload (envelope `data`, CPF numérico, beneficiários ordenados). Calcula hash 128 bits com cyrb128 → vira consentId e seed do PRNG. Gera 3 cotações (Bradesco, Icatu, MAG) com preços determinísticos baseados em idade, sexo, fumo e coberturas.",
+        "height": 240,
+        "width": 520,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        16
+      ],
+      "id": "c3d2f9b1-3e5d-452c-b098-3249a0cb4f4b",
+      "name": "Sticky Cotação"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "quote-life/request",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        368,
+        112
+      ],
+      "id": "d5f3f4dd-cb06-43c0-8375-8a121f5d3215",
+      "name": "POST /quote-life/request"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Passo 1 — Normaliza a entrada e calcula hash determinístico.\n *\n * Adota estilo OPIN: espera envelope { data: { ... } }. Se o cliente mandar\n * sem envelope (modo tolerante para testes rápidos), aceita também.\n *\n * O header `x-idempotency-key`, se presente, entra no hash e permite ao\n * cliente controlar quando quer uma nova cotação.\n */\n\nconst incoming = $input.first().json;\nconst body = incoming.body ?? incoming;\nconst headers = incoming.headers ?? {};\nconst payload = body.data ?? body;\n\nfunction onlyDigits(s) {\n  return String(s ?? '').replace(/\\D/g, '');\n}\nfunction normalizeDate(s) {\n  if (!s) return null;\n  return String(s).slice(0, 10);\n}\nfunction toNum(v) {\n  const n = Number(v);\n  return Number.isFinite(n) ? n : 0;\n}\n\n// Beneficiários: obrigatório ao menos 1\nconst beneficiarios = Array.isArray(payload.beneficiarios) ? payload.beneficiarios : [];\nif (beneficiarios.length === 0) {\n  throw new Error('VALIDATION: payload.beneficiarios é obrigatório e deve conter ao menos 1 item.');\n}\n\n// Validar percentuais somam 100 (tolerância 0.01)\nconst totalPct = beneficiarios.reduce((s, b) => s + toNum(b.percentual), 0);\nif (Math.abs(totalPct - 100) > 0.01) {\n  throw new Error(`VALIDATION: percentuais dos beneficiários devem somar 100. Recebido: ${totalPct}`);\n}\n\nconst sexoNormalizado = String(payload.segurado?.sexo ?? 'm').toLowerCase().charAt(0);\nif (!['m', 'f'].includes(sexoNormalizado)) {\n  throw new Error('VALIDATION: sexo do segurado deve ser \"m\" ou \"f\".');\n}\n\nconst capitalMorte = toNum(payload.cobertura?.capitalMorte);\nif (capitalMorte < 10000) {\n  throw new Error('VALIDATION: cobertura.capitalMorte é obrigatório e deve ser >= R$ 10.000.');\n}\n\nconst normalized = {\n  contratante: {\n    cep: onlyDigits(payload.contratante?.cep)\n  },\n  segurado: {\n    cpf: onlyDigits(payload.segurado?.cpf),\n    dataNascimento: normalizeDate(payload.segurado?.dataNascimento),\n    sexo: sexoNormalizado,\n    fumante: Boolean(payload.segurado?.fumante ?? false),\n    profissao: String(payload.segurado?.profissao ?? 'outros').toLowerCase()\n  },\n  beneficiarios: beneficiarios\n    .map(b => ({\n      nome: String(b.nome ?? '').trim(),\n      parentesco: String(b.parentesco ?? 'outro').toLowerCase(),\n      percentual: Math.round(toNum(b.percentual) * 100) / 100\n    }))\n    .sort((a, b) =>\n      a.parentesco.localeCompare(b.parentesco) ||\n      a.nome.localeCompare(b.nome)\n    ),\n  cobertura: {\n    capitalMorte,\n    capitalInvalidezAcidente: toNum(payload.cobertura?.capitalInvalidezAcidente),\n    capitalInvalidezDoenca: toNum(payload.cobertura?.capitalInvalidezDoenca),\n    capitalDoencasGraves: toNum(payload.cobertura?.capitalDoencasGraves),\n    auxilioFuneral: toNum(payload.cobertura?.auxilioFuneral),\n    diariaIncapacidade: toNum(payload.cobertura?.diariaIncapacidade),\n    prazo: String(payload.cobertura?.prazo ?? 'anualRenovavel')\n  },\n  idempotencyKey: headers['x-idempotency-key'] ?? null\n};\n\n// cyrb128 — hash determinístico 128 bits (4 uint32).\nfunction cyrb128(str) {\n  let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;\n  for (let i = 0, k; i < str.length; i++) {\n    k = str.charCodeAt(i);\n    h1 = h2 ^ Math.imul(h1 ^ k, 597399067);\n    h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);\n    h3 = h4 ^ Math.imul(h3 ^ k, 951274213);\n    h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);\n  }\n  h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);\n  h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);\n  h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);\n  h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);\n  h1 ^= (h2 ^ h3 ^ h4); h2 ^= h1; h3 ^= h1; h4 ^= h1;\n  return [h1 >>> 0, h2 >>> 0, h3 >>> 0, h4 >>> 0];\n}\n\nconst hashParts = cyrb128(JSON.stringify(normalized));\nconst hashHex = hashParts.map(n => n.toString(16).padStart(8, '0')).join('');\n\nconst consentId = [\n  'urn:opin-mock:life:consent:',\n  hashHex.slice(0, 8), '-',\n  hashHex.slice(8, 12), '-',\n  hashHex.slice(12, 16), '-',\n  hashHex.slice(16, 20), '-',\n  hashHex.slice(20, 32)\n].join('');\n\nreturn [{\n  json: { normalized, hashHex, seed: hashParts[0], consentId }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        112
+      ],
+      "id": "f1c71ff6-ded4-456d-bd62-fbbcadeea267",
+      "name": "Normalizar e Hash (Cotar)"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Passo 2 — Gera cotação de VIDA determinística e monta envelope OPIN-style.\n *\n * Preço sensível a idade, sexo, fumo e coberturas. PRNG seedado no hash:\n * mesmos inputs → mesmos preços. Planos ordenados por prêmio mensal.\n */\n\nconst { normalized, hashHex, seed, consentId } = $input.first().json;\n\nlet s = seed;\nconst rand = () => {\n  s = (s + 0x6D2B79F5) | 0;\n  let t = s;\n  t = Math.imul(t ^ (t >>> 15), t | 1);\n  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);\n  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;\n};\nconst randRange = (min, max) => min + rand() * (max - min);\n\nfunction idadeAnos(dataNascimento) {\n  if (!dataNascimento) return 35;\n  const nasc = DateTime.fromISO(dataNascimento);\n  if (!nasc.isValid) return 35;\n  return Math.max(0, Math.floor(DateTime.now().diff(nasc, 'years').years));\n}\n\n// Faixas etárias vida: taxa anual por R$ 1.000 de capital morte\nconst faixasEtarias = [\n  { min: 0,  max: 22,  taxa: 1.20 },\n  { min: 23, max: 27,  taxa: 1.40 },\n  { min: 28, max: 32,  taxa: 1.65 },\n  { min: 33, max: 37,  taxa: 1.95 },\n  { min: 38, max: 42,  taxa: 2.35 },\n  { min: 43, max: 47,  taxa: 3.00 },\n  { min: 48, max: 52,  taxa: 4.20 },\n  { min: 53, max: 57,  taxa: 6.00 },\n  { min: 58, max: 62,  taxa: 8.50 },\n  { min: 63, max: 150, taxa: 12.00 }\n];\nfunction taxaPorIdade(idade) {\n  const f = faixasEtarias.find(f => idade >= f.min && idade <= f.max);\n  return f ? f.taxa : 12.0;\n}\n\nconst idade = idadeAnos(normalized.segurado.dataNascimento);\nconst sexo = normalized.segurado.sexo;\nconst fumante = normalized.segurado.fumante;\n\nconst taxaBase = taxaPorIdade(idade);\nconst multSexo    = sexo === 'f' ? 0.72 : 1.00;\nconst multFumante = fumante ? 1.85 : 1.00;\n\n// Profissões de risco (sem lista fechada: só alguns exemplos)\nconst profRisco = ['motoboy', 'motofrete', 'bombeiro', 'policial', 'seguranca armada', 'eletricista industrial'];\nconst multRisco = profRisco.some(p => normalized.segurado.profissao.includes(p)) ? 1.35 : 1.0;\n\nconst cob = normalized.cobertura;\nconst K = cob.capitalMorte / 1000;\nconst Kia = cob.capitalInvalidezAcidente / 1000;\nconst Kid = cob.capitalInvalidezDoenca / 1000;\nconst Kdg = cob.capitalDoencasGraves / 1000;\nconst Kaf = cob.auxilioFuneral / 1000;\nconst Kdi = cob.diariaIncapacidade;\n\n// Taxas adicionais (por R$ 1.000 de capital, anual)\nconst taxaIA = 0.55;   // invalidez por acidente\nconst taxaID = 1.80;   // invalidez por doença\nconst taxaDG = 3.00;   // doenças graves\nconst taxaAF = 18.00;  // auxílio funeral (capital baixo)\nconst taxaDI = 14.00;  // diária incapacidade (por R$ de diária)\n\n// Prêmio anual base (considerando todos os fatores)\nfunction premioAnual(multMarca) {\n  const base = K * taxaBase * multSexo * multFumante * multRisco;\n  const adic = (Kia * taxaIA) + (Kid * taxaID) + (Kdg * taxaDG) + (Kaf * taxaAF) + (Kdi * taxaDI);\n  return (base + adic) * multMarca;\n}\n\nconst operadoras = [\n  {\n    codigo: 'BRD',\n    nome: 'Bradesco Seguros',\n    registroSusep: '0153-1',\n    produto: 'Viver Bem Individual',\n    multMarca: 1.00,\n    carenciaMorteNatural: 24\n  },\n  {\n    codigo: 'ICA',\n    nome: 'Icatu Seguros',\n    registroSusep: '0168-0',\n    produto: 'Icatu Vida Master',\n    multMarca: 0.92,\n    carenciaMorteNatural: 12\n  },\n  {\n    codigo: 'MAG',\n    nome: 'MAG Seguros',\n    registroSusep: '0153-9',\n    produto: 'MAG Premier Vida',\n    multMarca: 1.08,\n    carenciaMorteNatural: 24\n  }\n];\n\nconst planos = operadoras\n  .map(op => {\n    const ruido = 1 + randRange(-0.03, 0.03);\n    const anual = Math.round(premioAnual(op.multMarca) * ruido * 100) / 100;\n    const mensal = Math.round(anual / 12 * 100) / 100;\n\n    const coberturasList = [\n      { tipo: 'morte',              capital: cob.capitalMorte }\n    ];\n    if (cob.capitalInvalidezAcidente > 0) coberturasList.push({ tipo: 'invalidez_permanente_acidente', capital: cob.capitalInvalidezAcidente });\n    if (cob.capitalInvalidezDoenca  > 0) coberturasList.push({ tipo: 'invalidez_permanente_doenca',   capital: cob.capitalInvalidezDoenca });\n    if (cob.capitalDoencasGraves    > 0) coberturasList.push({ tipo: 'doencas_graves',                capital: cob.capitalDoencasGraves });\n    if (cob.auxilioFuneral          > 0) coberturasList.push({ tipo: 'auxilio_funeral',               capital: cob.auxilioFuneral });\n    if (cob.diariaIncapacidade      > 0) coberturasList.push({ tipo: 'diaria_incapacidade_temporaria', valorDiario: cob.diariaIncapacidade });\n\n    return {\n      planId: `${op.codigo}-${hashHex.slice(0, 6)}`,\n      operadora: {\n        codigo: op.codigo,\n        nome: op.nome,\n        registroSusep: op.registroSusep\n      },\n      produto: {\n        nome: `${op.nome} ${op.produto}`,\n        prazo: cob.prazo\n      },\n      premio: {\n        mensal,\n        anual,\n        iof: 0.0038 * anual,\n        moeda: 'BRL'\n      },\n      coberturas: coberturasList,\n      carencias: {\n        morteNatural: op.carenciaMorteNatural === 0 ? 'sem carência' : `${op.carenciaMorteNatural} meses para DPPs`,\n        morteAcidental: 'sem carência',\n        invalidezAcidente: 'sem carência',\n        invalidezDoenca: '24 meses para DPPs',\n        doencasGraves: '90 dias',\n        diariaIncapacidade: '60 dias'\n      },\n      vigencia: {\n        tipo: cob.prazo,\n        renovacao: cob.prazo === 'anualRenovavel' ? 'automática com recálculo anual' : 'não renovável'\n      },\n      exclusoesImportantes: [\n        'Doenças preexistentes não declaradas',\n        'Suicídio nos primeiros 24 meses',\n        'Atos dolosos do segurado'\n      ]\n    };\n  })\n  .sort((a, b) => a.premio.mensal - b.premio.mensal);\n\nfunction formatCpf(digits) {\n  if (!digits || digits.length !== 11) return null;\n  return digits.replace(/(\\d{3})(\\d{3})(\\d{3})(\\d{2})/, '$1.$2.$3-$4');\n}\n\nconst now = DateTime.now();\n\nreturn [{\n  json: {\n    data: {\n      consentId,\n      quoteStatus: 'ACKNOWLEDGED',\n      requestDateTime: now.toISO(),\n      validadeDias: 30,\n      contratante: normalized.contratante,\n      segurado: {\n        cpf: formatCpf(normalized.segurado.cpf),\n        dataNascimento: normalized.segurado.dataNascimento,\n        idade,\n        sexo: normalized.segurado.sexo,\n        fumante: normalized.segurado.fumante,\n        profissao: normalized.segurado.profissao\n      },\n      beneficiarios: normalized.beneficiarios,\n      cobertura: normalized.cobertura,\n      planos\n    },\n    meta: {\n      totalPlanos: planos.length,\n      apiVersion: 'opin-style-life-v1',\n      deterministicHash: hashHex.slice(0, 16),\n      requestDateTime: now.toISO(),\n      disclaimer: 'Resposta simulada. Vida é regulada pela SUSEP; as faixas, taxas e preços aqui são didáticos. Em produção, usar API da seguradora parceira.'\n    }\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        112
+      ],
+      "id": "252663e0-b020-4028-af42-b4a7a0130b63",
+      "name": "Gerar Cotação"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 201,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "X-Api-Version",
+                "value": "opin-style-health-v1"
+              },
+              {
+                "name": "X-Fapi-Interaction-Id",
+                "value": "={{ $json.meta.deterministicHash }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        944,
+        112
+      ],
+      "id": "508810fd-0d2d-48db-acb9-e33fb89db2fb",
+      "name": "Responder Cotação (201)"
+    },
+    {
+      "parameters": {
+        "content": "### Emissão\n\nValida stateless: recomputa o hash do `originalQuoteRequest` recebido e compara com o `consentId`. Se bate, emite apólice determinística com número `LV-<OP>-<hash>` e vigência de 12 meses. Se não bate ou faltam campos obrigatórios, devolve ResponseError 4xx.",
+        "height": 400,
+        "width": 520,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        272
+      ],
+      "id": "c1e10676-df84-41d2-b311-af85aff755db",
+      "name": "Sticky Emissão"
+    },
+    {
+      "parameters": {
+        "httpMethod": "PATCH",
+        "path": "quote-life/accept",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        256,
+        448
+      ],
+      "id": "5a0ca20a-c2c9-4a24-a87b-5fd41bdf4ed4",
+      "name": "PATCH /quote-life/accept"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Passo 1 — Valida consentId recalculando o hash do originalQuoteRequest.\n *\n * Mock stateless: cliente precisa reenviar `originalQuoteRequest`\n * (exatamente o mesmo payload do POST /quote-life/request) junto com\n * `selectedPlan`, `paymentConfirmation` e `acceptance: true`.\n */\n\nconst incoming = $input.first().json;\nconst body = incoming.body ?? incoming;\nconst headers = incoming.headers ?? {};\nconst payload = body.data ?? body;\n\nconst consentIdFromPath = payload.consentId;\nif (!consentIdFromPath) {\n  return [{ json: { __error: 'MISSING_CONSENT_ID', detail: 'payload.data.consentId é obrigatório.' } }];\n}\n\nconst originalQuoteRequest = payload.originalQuoteRequest;\nconst selectedPlan = payload.selectedPlan;\nconst paymentConfirmation = payload.paymentConfirmation;\nconst acceptance = payload.acceptance;\n\nif (!originalQuoteRequest) {\n  return [{ json: { __error: 'MISSING_ORIGINAL_REQUEST', detail: 'payload.originalQuoteRequest é obrigatório (stateless validation).' } }];\n}\nif (!selectedPlan?.planId && !selectedPlan?.operadora?.codigo) {\n  return [{ json: { __error: 'MISSING_SELECTED_PLAN', detail: 'payload.selectedPlan deve conter planId ou operadora.codigo.' } }];\n}\nif (acceptance !== true) {\n  return [{ json: { __error: 'ACCEPTANCE_REQUIRED', detail: 'payload.acceptance deve ser true para emitir a apólice.' } }];\n}\nif (!paymentConfirmation?.transactionId) {\n  return [{ json: { __error: 'PAYMENT_REQUIRED', detail: 'payload.paymentConfirmation.transactionId é obrigatório.' } }];\n}\n\nfunction onlyDigits(s) { return String(s ?? '').replace(/\\D/g, ''); }\nfunction normalizeDate(s) { return s ? String(s).slice(0, 10) : null; }\nfunction toNum(v) { const n = Number(v); return Number.isFinite(n) ? n : 0; }\n\nconst beneficiarios = Array.isArray(originalQuoteRequest.beneficiarios) ? originalQuoteRequest.beneficiarios : [];\nconst sexoNormalizado = String(originalQuoteRequest.segurado?.sexo ?? 'm').toLowerCase().charAt(0);\n\nconst normalized = {\n  contratante: {\n    cep: onlyDigits(originalQuoteRequest.contratante?.cep)\n  },\n  segurado: {\n    cpf: onlyDigits(originalQuoteRequest.segurado?.cpf),\n    dataNascimento: normalizeDate(originalQuoteRequest.segurado?.dataNascimento),\n    sexo: sexoNormalizado,\n    fumante: Boolean(originalQuoteRequest.segurado?.fumante ?? false),\n    profissao: String(originalQuoteRequest.segurado?.profissao ?? 'outros').toLowerCase()\n  },\n  beneficiarios: beneficiarios\n    .map(b => ({\n      nome: String(b.nome ?? '').trim(),\n      parentesco: String(b.parentesco ?? 'outro').toLowerCase(),\n      percentual: Math.round(toNum(b.percentual) * 100) / 100\n    }))\n    .sort((a, b) =>\n      a.parentesco.localeCompare(b.parentesco) ||\n      a.nome.localeCompare(b.nome)\n    ),\n  cobertura: {\n    capitalMorte: toNum(originalQuoteRequest.cobertura?.capitalMorte),\n    capitalInvalidezAcidente: toNum(originalQuoteRequest.cobertura?.capitalInvalidezAcidente),\n    capitalInvalidezDoenca: toNum(originalQuoteRequest.cobertura?.capitalInvalidezDoenca),\n    capitalDoencasGraves: toNum(originalQuoteRequest.cobertura?.capitalDoencasGraves),\n    auxilioFuneral: toNum(originalQuoteRequest.cobertura?.auxilioFuneral),\n    diariaIncapacidade: toNum(originalQuoteRequest.cobertura?.diariaIncapacidade),\n    prazo: String(originalQuoteRequest.cobertura?.prazo ?? 'anualRenovavel')\n  },\n  idempotencyKey: headers['x-idempotency-key'] ?? null\n};\n\nfunction cyrb128(str) {\n  let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;\n  for (let i = 0, k; i < str.length; i++) {\n    k = str.charCodeAt(i);\n    h1 = h2 ^ Math.imul(h1 ^ k, 597399067);\n    h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);\n    h3 = h4 ^ Math.imul(h3 ^ k, 951274213);\n    h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);\n  }\n  h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);\n  h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);\n  h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);\n  h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);\n  h1 ^= (h2 ^ h3 ^ h4); h2 ^= h1; h3 ^= h1; h4 ^= h1;\n  return [h1 >>> 0, h2 >>> 0, h3 >>> 0, h4 >>> 0];\n}\n\nconst hashParts = cyrb128(JSON.stringify(normalized));\nconst hashHex = hashParts.map(n => n.toString(16).padStart(8, '0')).join('');\nconst expectedConsentId = [\n  'urn:opin-mock:life:consent:',\n  hashHex.slice(0, 8), '-',\n  hashHex.slice(8, 12), '-',\n  hashHex.slice(12, 16), '-',\n  hashHex.slice(16, 20), '-',\n  hashHex.slice(20, 32)\n].join('');\n\nconst consentMatches = expectedConsentId === consentIdFromPath;\n\nreturn [{\n  json: {\n    consentMatches,\n    consentIdFromPath,\n    expectedConsentId,\n    normalized,\n    hashHex,\n    seed: hashParts[0],\n    selectedPlan,\n    paymentConfirmation,\n    __error: null\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        448
+      ],
+      "id": "119f94e5-d297-43d7-8304-4134aff704d2",
+      "name": "Validar consentId e Hash"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-consent-match",
+              "leftValue": "={{ $json.__error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "empty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "cond-consent-match-2",
+              "leftValue": "={{ $json.consentMatches }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        640,
+        448
+      ],
+      "id": "32430a32-d487-46f0-b0c9-6ffa3e02ff79",
+      "name": "Validação passou?"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Passo 2 (sucesso) — Emite apólice de VIDA determinística.\n *\n * Usa o mesmo PRNG do fluxo de cotação para que o prêmio emitido bata com\n * o mostrado na cotação. Deriva `policyNumber` do hash + código da operadora.\n * Vigência padrão: 12 meses anuais renováveis.\n */\n\nconst { normalized, hashHex, seed, selectedPlan, paymentConfirmation, consentIdFromPath } = $input.first().json;\n\nlet s = seed;\nconst rand = () => {\n  s = (s + 0x6D2B79F5) | 0;\n  let t = s;\n  t = Math.imul(t ^ (t >>> 15), t | 1);\n  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);\n  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;\n};\nconst randRange = (min, max) => min + rand() * (max - min);\n\nfunction idadeAnos(dataNascimento) {\n  if (!dataNascimento) return 35;\n  const nasc = DateTime.fromISO(dataNascimento);\n  if (!nasc.isValid) return 35;\n  return Math.max(0, Math.floor(DateTime.now().diff(nasc, 'years').years));\n}\n\nconst faixasEtarias = [\n  { min: 0,  max: 22,  taxa: 1.20 },\n  { min: 23, max: 27,  taxa: 1.40 },\n  { min: 28, max: 32,  taxa: 1.65 },\n  { min: 33, max: 37,  taxa: 1.95 },\n  { min: 38, max: 42,  taxa: 2.35 },\n  { min: 43, max: 47,  taxa: 3.00 },\n  { min: 48, max: 52,  taxa: 4.20 },\n  { min: 53, max: 57,  taxa: 6.00 },\n  { min: 58, max: 62,  taxa: 8.50 },\n  { min: 63, max: 150, taxa: 12.00 }\n];\nfunction taxaPorIdade(idade) {\n  const f = faixasEtarias.find(f => idade >= f.min && idade <= f.max);\n  return f ? f.taxa : 12.0;\n}\n\nconst idade = idadeAnos(normalized.segurado.dataNascimento);\nconst sexo = normalized.segurado.sexo;\nconst fumante = normalized.segurado.fumante;\n\nconst taxaBase = taxaPorIdade(idade);\nconst multSexo = sexo === 'f' ? 0.72 : 1.00;\nconst multFumante = fumante ? 1.85 : 1.00;\nconst profRisco = ['motoboy', 'motofrete', 'bombeiro', 'policial', 'seguranca armada', 'eletricista industrial'];\nconst multRisco = profRisco.some(p => normalized.segurado.profissao.includes(p)) ? 1.35 : 1.0;\n\nconst cob = normalized.cobertura;\nconst K = cob.capitalMorte / 1000;\nconst Kia = cob.capitalInvalidezAcidente / 1000;\nconst Kid = cob.capitalInvalidezDoenca / 1000;\nconst Kdg = cob.capitalDoencasGraves / 1000;\nconst Kaf = cob.auxilioFuneral / 1000;\nconst Kdi = cob.diariaIncapacidade;\n\nconst taxaIA = 0.55, taxaID = 1.80, taxaDG = 3.00, taxaAF = 18.00, taxaDI = 14.00;\n\nconst operadoras = [\n  { codigo: 'BRD', nome: 'Bradesco Seguros', registroSusep: '0153-1', produto: 'Viver Bem Individual', multMarca: 1.00, carenciaMorteNatural: 24 },\n  { codigo: 'ICA', nome: 'Icatu Seguros',    registroSusep: '0168-0', produto: 'Icatu Vida Master',    multMarca: 0.92, carenciaMorteNatural: 12 },\n  { codigo: 'MAG', nome: 'MAG Seguros',      registroSusep: '0153-9', produto: 'MAG Premier Vida',     multMarca: 1.08, carenciaMorteNatural: 24 }\n];\n\nfunction premioAnual(multMarca) {\n  const base = K * taxaBase * multSexo * multFumante * multRisco;\n  const adic = (Kia * taxaIA) + (Kid * taxaID) + (Kdg * taxaDG) + (Kaf * taxaAF) + (Kdi * taxaDI);\n  return (base + adic) * multMarca;\n}\n\n// Recompute planos in the SAME order the quote flow did so the PRNG aligns\nconst planosRecomputados = operadoras.map(op => {\n  const ruido = 1 + randRange(-0.03, 0.03);\n  const anual = Math.round(premioAnual(op.multMarca) * ruido * 100) / 100;\n  const mensal = Math.round(anual / 12 * 100) / 100;\n  return {\n    planId: `${op.codigo}-${hashHex.slice(0, 6)}`,\n    operadora: op,\n    premio: { mensal, anual, iof: 0.0038 * anual, moeda: 'BRL' }\n  };\n});\n\n// Match the selected plan by planId or operadora.codigo\nconst planoEscolhido = planosRecomputados.find(p =>\n  (selectedPlan.planId && p.planId === selectedPlan.planId) ||\n  (selectedPlan.operadora?.codigo && p.operadora.codigo === selectedPlan.operadora.codigo)\n);\n\nif (!planoEscolhido) {\n  throw new Error(`Plano selecionado não encontrado na cotação original: ${JSON.stringify(selectedPlan)}`);\n}\n\n// Gera policyNumber determinístico\nconst policyNumber = `LV-${planoEscolhido.operadora.codigo}-${hashHex.slice(0, 8).toUpperCase()}`;\nconst policyId = `urn:opin-mock:life:policy:${hashHex.slice(0, 8)}-${hashHex.slice(8, 12)}-${hashHex.slice(12, 16)}-${hashHex.slice(16, 20)}-${hashHex.slice(20, 32)}`;\n\nconst now = DateTime.now();\nconst startDate = now;\nconst endDate = now.plus({ years: 1 });\n\n// Monta lista de coberturas para a apólice emitida\nconst coberturasEmitidas = [\n  { tipo: 'morte', capital: cob.capitalMorte }\n];\nif (cob.capitalInvalidezAcidente > 0) coberturasEmitidas.push({ tipo: 'invalidez_permanente_acidente', capital: cob.capitalInvalidezAcidente });\nif (cob.capitalInvalidezDoenca  > 0) coberturasEmitidas.push({ tipo: 'invalidez_permanente_doenca',   capital: cob.capitalInvalidezDoenca });\nif (cob.capitalDoencasGraves    > 0) coberturasEmitidas.push({ tipo: 'doencas_graves',                capital: cob.capitalDoencasGraves });\nif (cob.auxilioFuneral          > 0) coberturasEmitidas.push({ tipo: 'auxilio_funeral',               capital: cob.auxilioFuneral });\nif (cob.diariaIncapacidade      > 0) coberturasEmitidas.push({ tipo: 'diaria_incapacidade_temporaria', valorDiario: cob.diariaIncapacidade });\n\nfunction formatCpf(digits) {\n  if (!digits || digits.length !== 11) return null;\n  return digits.replace(/(\\d{3})(\\d{3})(\\d{3})(\\d{2})/, '$1.$2.$3-$4');\n}\n\nreturn [{\n  json: {\n    data: {\n      policyId,\n      policyNumber,\n      consentId: consentIdFromPath,\n      issueDateTime: now.toISO(),\n      startDate: startDate.toISODate(),\n      endDate: endDate.toISODate(),\n      status: 'ACTIVE',\n      insured: {\n        cpf: formatCpf(normalized.segurado.cpf),\n        dataNascimento: normalized.segurado.dataNascimento,\n        idade,\n        sexo: normalized.segurado.sexo,\n        fumante: normalized.segurado.fumante,\n        profissao: normalized.segurado.profissao\n      },\n      beneficiarios: normalized.beneficiarios,\n      coberturas: coberturasEmitidas,\n      selectedPlan: {\n        planId: planoEscolhido.planId,\n        operadora: {\n          codigo: planoEscolhido.operadora.codigo,\n          nome: planoEscolhido.operadora.nome,\n          registroSusep: planoEscolhido.operadora.registroSusep\n        },\n        produto: {\n          nome: `${planoEscolhido.operadora.nome} ${planoEscolhido.operadora.produto}`,\n          prazo: cob.prazo\n        }\n      },\n      premium: {\n        mensal: planoEscolhido.premio.mensal,\n        anual: planoEscolhido.premio.anual,\n        iof: planoEscolhido.premio.iof,\n        moeda: 'BRL'\n      },\n      payment: {\n        method: paymentConfirmation.method ?? null,\n        transactionId: paymentConfirmation.transactionId\n      },\n      documents: {\n        policyPdfUrl: `https://mock.opin-style/life/policies/${hashHex.slice(0, 32)}.pdf`,\n        resumoContratualUrl: `https://mock.opin-style/life/docs/resumo-${hashHex.slice(0, 16)}.pdf`\n      }\n    },\n    meta: {\n      apiVersion: 'opin-style-life-v1',\n      requestDateTime: now.toISO(),\n      disclaimer: 'Apólice simulada. Vida é regulada pela SUSEP, não pelo OPIN.'\n    }\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        352
+      ],
+      "id": "3d2007d8-4a31-4c6b-b9a0-650d0cca9cfe",
+      "name": "Emitir Apólice"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 201,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "X-Api-Version",
+                "value": "opin-style-health-v1"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1088,
+        352
+      ],
+      "id": "ade0cf75-1db2-466c-8c18-91e426920ef2",
+      "name": "Responder Emissão (201)"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Passo 2 (erro) — Monta ResponseError OPIN-style.\n */\n\nconst input = $input.first().json;\nconst now = DateTime.now();\n\nconst errorMap = {\n  MISSING_CONSENT_ID:      { title: 'consentId ausente', httpCode: 400 },\n  MISSING_ORIGINAL_REQUEST: { title: 'originalQuoteRequest obrigatório', httpCode: 400 },\n  MISSING_SELECTED_PLAN:   { title: 'selectedPlan obrigatório', httpCode: 400 },\n  ACCEPTANCE_REQUIRED:     { title: 'acceptance precisa ser true', httpCode: 400 },\n  PAYMENT_REQUIRED:        { title: 'paymentConfirmation obrigatório', httpCode: 400 },\n  CONSENT_MISMATCH:        { title: 'consentId não confere com originalQuoteRequest', httpCode: 422 }\n};\n\nconst code = input.__error ?? 'CONSENT_MISMATCH';\nconst detail = input.detail ?? (\n  code === 'CONSENT_MISMATCH'\n    ? `O hash recomputado do originalQuoteRequest não bate com o consentId informado (${input.consentIdFromPath}).`\n    : 'Erro de validação.'\n);\nconst meta = errorMap[code] ?? errorMap.CONSENT_MISMATCH;\n\nreturn [{\n  json: {\n    errors: [{ code, title: meta.title, detail }],\n    meta: {\n      apiVersion: 'opin-style-life-v1',\n      requestDateTime: now.toISO(),\n      httpCode: meta.httpCode\n    }\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        544
+      ],
+      "id": "f446e1b2-df7c-4962-b175-dad3d0f0fa8b",
+      "name": "Montar ResponseError"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": "={{ $json.meta.httpCode }}",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "X-Api-Version",
+                "value": "opin-style-health-v1"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1088,
+        544
+      ],
+      "id": "0b2c6ac6-4e6d-4e9e-bff4-a90559a3ef8c",
+      "name": "Responder Erro (4xx)"
+    },
+    {
+      "parameters": {
+        "content": "### Exemplo de payload — cotação\n\n```json\n{\n  \"data\": {\n    \"contratante\": { \"cep\": \"01310100\" },\n    \"segurado\": {\n      \"cpf\": \"12345678901\",\n      \"dataNascimento\": \"1988-03-15\",\n      \"sexo\": \"m\",\n      \"fumante\": false,\n      \"profissao\": \"analista\"\n    },\n    \"beneficiarios\": [\n      { \"nome\": \"Ana Silva\", \"parentesco\": \"conjuge\", \"percentual\": 50 },\n      { \"nome\": \"João Silva\", \"parentesco\": \"filho\", \"percentual\": 25 },\n      { \"nome\": \"Maria Silva\", \"parentesco\": \"filha\", \"percentual\": 25 }\n    ],\n    \"cobertura\": {\n      \"capitalMorte\": 500000,\n      \"capitalInvalidezAcidente\": 500000,\n      \"capitalDoencasGraves\": 100000,\n      \"auxilioFuneral\": 10000,\n      \"prazo\": \"anualRenovavel\"\n    }\n  }\n}\n```",
+        "height": 200,
+        "width": 520,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        688
+      ],
+      "id": "502318bc-14a0-46a3-b7f7-445535324fa2",
+      "name": "Sticky Exemplos"
+    },
+    {
+      "parameters": {
+        "content": "[![fazer.ai](https://framerusercontent.com/images/HqY9djLTzyutSKnuLLqBr92KbM.png?scale-down-to=256)](https://fazer.ai?utm_source=n8n&utm_campaign=sec-v3)\n\n## Esse é um template faça você mesmo do canal\n## Lucas Moreira\n\n### Inscreva-se no nosso canal no YouTube\n[![YouTube Lucas Moreira](https://img.shields.io/youtube/channel/subscribers/UCtmp6SxzLscu0GRTbgM8FTw?style=flat-square&logo=youtube&label=Inscreva-se&color=f00)](https://youtube.com/@eulucassmoreira?si=0lH7hwX9pukjhmPQ)\n[![Instagram](https://img.shields.io/badge/instagram-black?logo=instagram&style=for-the-badge)](https://instagram.com/eulucassmoreira)\n[![GitHub fazer.ai](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white&label)](https://github.com/fazer-ai)\n",
+        "height": 472,
+        "width": 550,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        -464
+      ],
+      "id": "680c8bf0-5780-4cee-b0c8-2918e76f990e",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "## Quer entender como funciona?\n\n\n### Assista o vídeo, deixe um like, e se inscreva no canal para ter acesso a mais workflows como esse!\n\n[![Vídeo YouTube Kanban Clínicas](https://i1.ytimg.com/vi_webp/vYtaGw3vRII/maxresdefault.webp)](https://www.youtube.com/watch?v=vYtaGw3vRII)",
+        "height": 472,
+        "width": 596,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        144,
+        -464
+      ],
+      "id": "06d0a6f5-fd50-4fc9-9df3-7316db1b06f2",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "## [Clique aqui e entre agora para tirar suas dúvidas](https://lucasmoreira.ai)\n[![Banner comunidade](https://assets-v2.circle.so/voccie8o44ecsfpx7p8z1j9rze82)](https://lucasmoreira.ai)",
+        "height": 472,
+        "width": 1124,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        752,
+        -464
+      ],
+      "id": "9685da20-0ab6-40bc-bef3-cde990fc0d8c",
+      "name": "Sticky Note36"
+    },
+    {
+      "parameters": {
+        "content": "### Cotação (Auto)\n\nNormaliza o payload (envelope `data`, placa uppercase, CPF digits-only, CEP digits-only). Calcula hash 128 bits com cyrb128 → vira consentId e seed do PRNG. Gera 3 cotações (Porto, Bradesco, SulAmérica) com preços determinísticos baseados em idade/CNH/sexo do condutor, ano do veículo, CEP e cobertura escolhida.",
+        "height": 240,
+        "width": 520,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        716
+      ],
+      "id": "e6bea0df-7937-4dfd-adf9-2a0083aefc30",
+      "name": "Sticky Cotação (Auto)"
+    },
+    {
+      "parameters": {
+        "content": "### Emissão (Auto)\n\nRecebe `originalQuoteRequest` + `planoEscolhido` e recomputa o hash. Se bate, emite a apólice. Caso contrário, retorna 422 VALIDATION.",
+        "height": 240,
+        "width": 520,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        972
+      ],
+      "id": "a4c69d45-6370-46b9-837e-c0a3215a5e93",
+      "name": "Sticky Emissão (Auto)"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "quote-auto/request",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        368,
+        812
+      ],
+      "id": "20dd2cdd-b51b-4594-9bd7-6dcd436cd38d",
+      "name": "POST /quote-auto/request"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Passo 1 (Auto) — Normaliza entrada e calcula hash determinístico.\n *\n * Estilo OPIN: espera envelope { data: { ... } }. Aceita sem envelope (tolerante).\n * Header x-idempotency-key entra no hash se presente.\n */\n\nconst incoming = $input.first().json;\nconst body = incoming.body ?? incoming;\nconst headers = incoming.headers ?? {};\nconst payload = body.data ?? body;\n\nfunction onlyDigits(s) {\n  return String(s ?? '').replace(/\\D/g, '');\n}\nfunction normalizeDate(s) {\n  if (!s) return null;\n  return String(s).slice(0, 10);\n}\nfunction toNum(v) {\n  const n = Number(v);\n  return Number.isFinite(n) ? n : 0;\n}\n\nconst veiculo = payload.veiculo ?? {};\nconst condutor = payload.condutor ?? {};\nconst localizacao = payload.localizacao ?? {};\nconst cobertura = payload.cobertura ?? {};\n\nif (!veiculo.placa && !veiculo.chassi) {\n  throw new Error('VALIDATION: veiculo.placa (ou chassi) é obrigatório.');\n}\nif (!condutor.cpf) {\n  throw new Error('VALIDATION: condutor.cpf é obrigatório.');\n}\nif (!localizacao.cep) {\n  throw new Error('VALIDATION: localizacao.cep é obrigatório.');\n}\n\nconst anoModelo = toNum(veiculo.anoModelo);\nif (anoModelo < 1980 || anoModelo > 2100) {\n  throw new Error('VALIDATION: veiculo.anoModelo inválido.');\n}\n\nconst sexoNorm = String(condutor.sexo ?? 'm').toLowerCase().charAt(0);\nif (!['m', 'f'].includes(sexoNorm)) {\n  throw new Error('VALIDATION: condutor.sexo deve ser \"m\" ou \"f\".');\n}\n\nconst tipoCoberturaNorm = String(cobertura.tipo ?? 'compreensiva').toLowerCase();\nif (!['compreensiva', 'rcf', 'app', 'basica'].includes(tipoCoberturaNorm)) {\n  throw new Error('VALIDATION: cobertura.tipo deve ser \"compreensiva\", \"rcf\", \"app\" ou \"basica\".');\n}\n\nconst normalized = {\n  veiculo: {\n    placa: String(veiculo.placa ?? '').toUpperCase().replace(/[^A-Z0-9]/g, ''),\n    chassi: String(veiculo.chassi ?? '').toUpperCase().replace(/[^A-Z0-9]/g, ''),\n    marca: String(veiculo.marca ?? '').toLowerCase(),\n    modelo: String(veiculo.modelo ?? '').toLowerCase(),\n    anoModelo,\n    combustivel: String(veiculo.combustivel ?? 'flex').toLowerCase(),\n    categoria: String(veiculo.categoria ?? 'passeio').toLowerCase(),\n  },\n  condutor: {\n    cpf: onlyDigits(condutor.cpf),\n    dataNascimento: normalizeDate(condutor.dataNascimento),\n    sexo: sexoNorm,\n    cnhDesde: normalizeDate(condutor.cnhDesde),\n    estadoCivil: String(condutor.estadoCivil ?? 'solteiro').toLowerCase(),\n    usoPrincipal: String(condutor.usoPrincipal ?? 'particular').toLowerCase(),\n  },\n  localizacao: {\n    cep: onlyDigits(localizacao.cep),\n    cidade: String(localizacao.cidade ?? '').toLowerCase(),\n    usoComercial: Boolean(localizacao.usoComercial ?? false),\n    garagem: Boolean(localizacao.garagem ?? true),\n  },\n  cobertura: {\n    tipo: tipoCoberturaNorm,\n    franquiaPerfil: String(cobertura.franquiaPerfil ?? 'normal').toLowerCase(),\n    appCapital: toNum(cobertura.appCapital),\n    rcfMateriais: toNum(cobertura.rcfMateriais),\n    rcfCorporais: toNum(cobertura.rcfCorporais),\n  },\n  idempotencyKey: headers['x-idempotency-key'] ?? null\n};\n\nfunction cyrb128(str) {\n  let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;\n  for (let i = 0, k; i < str.length; i++) {\n    k = str.charCodeAt(i);\n    h1 = h2 ^ Math.imul(h1 ^ k, 597399067);\n    h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);\n    h3 = h4 ^ Math.imul(h3 ^ k, 951274213);\n    h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);\n  }\n  h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);\n  h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);\n  h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);\n  h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);\n  h1 ^= (h2 ^ h3 ^ h4); h2 ^= h1; h3 ^= h1; h4 ^= h1;\n  return [h1 >>> 0, h2 >>> 0, h3 >>> 0, h4 >>> 0];\n}\n\nconst hashParts = cyrb128(JSON.stringify(normalized));\nconst hashHex = hashParts.map(n => n.toString(16).padStart(8, '0')).join('');\n\nconst consentId = [\n  'urn:opin-mock:auto:consent:',\n  hashHex.slice(0, 8), '-',\n  hashHex.slice(8, 12), '-',\n  hashHex.slice(12, 16), '-',\n  hashHex.slice(16, 20), '-',\n  hashHex.slice(20, 32)\n].join('');\n\nreturn [{\n  json: { normalized, hashHex, seed: hashParts[0], consentId }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        812
+      ],
+      "id": "91a017f1-b121-42bd-825f-6d78adfca4ca",
+      "name": "Normalizar e Hash (Cotar Auto)"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Passo 2 (Auto) — Gera cotação de AUTO determinística, envelope OPIN-style.\n *\n * Preço sensível a: idade do condutor, anos de CNH, sexo, ano do veículo,\n * tipo de cobertura, franquia, CEP (risco por prefixo), uso comercial e garagem.\n * PRNG seedado no hash → mesmos inputs retornam mesmos preços.\n */\n\nconst { normalized, hashHex, seed, consentId } = $input.first().json;\n\nlet s = seed;\nconst rand = () => {\n  s = (s + 0x6D2B79F5) | 0;\n  let t = s;\n  t = Math.imul(t ^ (t >>> 15), t | 1);\n  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);\n  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;\n};\nconst randRange = (min, max) => min + rand() * (max - min);\n\nfunction idadeAnos(dataNascimento) {\n  if (!dataNascimento) return 35;\n  const nasc = DateTime.fromISO(dataNascimento);\n  if (!nasc.isValid) return 35;\n  return Math.max(0, Math.floor(DateTime.now().diff(nasc, 'years').years));\n}\n\nfunction anosHabilitado(cnhDesde) {\n  if (!cnhDesde) return 5;\n  const d = DateTime.fromISO(cnhDesde);\n  if (!d.isValid) return 5;\n  return Math.max(0, Math.floor(DateTime.now().diff(d, 'years').years));\n}\n\n// FIPE simulado por ano: valor base do veículo\nfunction valorFipeSimulado(anoModelo, categoria) {\n  const anosUso = Math.max(0, DateTime.now().year - anoModelo);\n  const depreciacao = Math.max(0.25, 1 - anosUso * 0.09);\n  const baseCategorias = {\n    'passeio': 80000,\n    'hatch': 65000,\n    'sedan': 95000,\n    'suv': 140000,\n    'pickup': 180000,\n    'utilitario': 110000,\n  };\n  const base = baseCategorias[categoria] ?? 85000;\n  return Math.round(base * depreciacao);\n}\n\n// Risco por CEP (prefixo 2 dígitos aproxima região; mock grosseiro)\nfunction riscoCep(cep) {\n  const p = Number(String(cep).slice(0, 2));\n  if (!Number.isFinite(p)) return 1.0;\n  // Capitais com histórico de sinistralidade mais alta (SP/RJ/NE):\n  if ([1, 2, 3, 4, 5, 20, 21, 22, 23, 24, 50, 51, 52, 53, 54, 55, 57, 58].includes(p)) return 1.20;\n  // Demais capitais (mediano)\n  if ([13, 40, 41, 60, 69, 70, 80, 90].includes(p)) return 1.05;\n  return 0.95;\n}\n\nconst idade = idadeAnos(normalized.condutor.dataNascimento);\nconst anosCnh = anosHabilitado(normalized.condutor.cnhDesde);\nconst sexo = normalized.condutor.sexo;\nconst anoModelo = normalized.veiculo.anoModelo;\nconst fipe = valorFipeSimulado(anoModelo, normalized.veiculo.categoria);\n\n// Taxa base (anual, por % do valor FIPE)\nfunction taxaPorIdade(i) {\n  if (i < 25) return 0.080;\n  if (i < 30) return 0.055;\n  if (i < 40) return 0.038;\n  if (i < 55) return 0.030;\n  if (i < 65) return 0.034;\n  return 0.045;\n}\n\nconst taxaBase = taxaPorIdade(idade);\nconst multSexo = sexo === 'f' ? 0.90 : 1.00;\nconst multExperiencia = anosCnh < 2 ? 1.40 : anosCnh < 5 ? 1.15 : anosCnh < 15 ? 1.00 : 0.93;\nconst multUsoComercial = normalized.localizacao.usoComercial ? 1.25 : 1.00;\nconst multGaragem = normalized.localizacao.garagem ? 0.93 : 1.08;\nconst multCep = riscoCep(normalized.localizacao.cep);\n\n// Cobertura\nconst multCobertura = {\n  'compreensiva': 1.00,\n  'rcf': 0.45,\n  'app': 0.20,\n  'basica': 0.30,\n}[normalized.cobertura.tipo] ?? 1.00;\n\n// Franquia perfil (franquia reduzida = prêmio mais alto)\nconst multFranquia = {\n  'reduzida': 1.18,\n  'normal': 1.00,\n  'ampliada': 0.85,\n}[normalized.cobertura.franquiaPerfil] ?? 1.00;\n\n// Adicionais (RCF materiais/corporais e APP somam)\nconst adicRcf = (normalized.cobertura.rcfMateriais + normalized.cobertura.rcfCorporais) * 0.0012;\nconst adicApp = normalized.cobertura.appCapital * 0.0020;\n\nfunction premioAnual(multMarca) {\n  const base = fipe * taxaBase * multSexo * multExperiencia *\n               multUsoComercial * multGaragem * multCep *\n               multCobertura * multFranquia;\n  return (base + adicRcf + adicApp) * multMarca;\n}\n\nconst operadoras = [\n  {\n    codigo: 'PRT',\n    nome: 'Porto Seguro',\n    registroSusep: '0292-0',\n    produto: 'Auto Carro Fácil',\n    multMarca: 1.00,\n    franquiaReduzida: 3200,\n    franquiaNormal: 4500,\n    franquiaAmpliada: 6500\n  },\n  {\n    codigo: 'BRD',\n    nome: 'Bradesco Auto',\n    registroSusep: '0153-1',\n    produto: 'Bradesco Auto Primeiro Protegido',\n    multMarca: 1.04,\n    franquiaReduzida: 3000,\n    franquiaNormal: 4300,\n    franquiaAmpliada: 6200\n  },\n  {\n    codigo: 'SUL',\n    nome: 'SulAmérica Auto',\n    registroSusep: '0477-8',\n    produto: 'SulAmérica Auto Ativo',\n    multMarca: 0.97,\n    franquiaReduzida: 3400,\n    franquiaNormal: 4700,\n    franquiaAmpliada: 6700\n  }\n];\n\nconst planos = operadoras\n  .map(op => {\n    const ruido = 1 + randRange(-0.03, 0.03);\n    const anual = Math.round(premioAnual(op.multMarca) * ruido * 100) / 100;\n    const mensal = Math.round(anual / 12 * 100) / 100;\n    const franquia = {\n      'reduzida': op.franquiaReduzida,\n      'normal': op.franquiaNormal,\n      'ampliada': op.franquiaAmpliada\n    }[normalized.cobertura.franquiaPerfil] ?? op.franquiaNormal;\n\n    const coberturasList = [{\n      tipo: normalized.cobertura.tipo,\n      valorFipeSimulado: fipe,\n      franquia,\n    }];\n    if (normalized.cobertura.rcfMateriais > 0) coberturasList.push({\n      tipo: 'rcf_materiais',\n      capital: normalized.cobertura.rcfMateriais\n    });\n    if (normalized.cobertura.rcfCorporais > 0) coberturasList.push({\n      tipo: 'rcf_corporais',\n      capital: normalized.cobertura.rcfCorporais\n    });\n    if (normalized.cobertura.appCapital > 0) coberturasList.push({\n      tipo: 'app_acidentes_pessoais',\n      capital: normalized.cobertura.appCapital\n    });\n\n    return {\n      planId: `${op.codigo}-${hashHex.slice(0, 6)}`,\n      operadora: {\n        codigo: op.codigo,\n        nome: op.nome,\n        registroSusep: op.registroSusep\n      },\n      produto: {\n        nome: `${op.nome} ${op.produto}`,\n        vigencia: '12 meses renovável'\n      },\n      premio: {\n        mensal,\n        anual,\n        iof: 0.0738 * anual,\n        moeda: 'BRL'\n      },\n      coberturas: coberturasList,\n      assistencia24h: ['guincho 300km', 'chaveiro', 'troca de pneu'],\n      exclusoesImportantes: [\n        'Condutor não declarado com menos de 26 anos',\n        'Uso comercial não declarado',\n        'Direção sob efeito de álcool/substâncias'\n      ]\n    };\n  })\n  .sort((a, b) => a.premio.mensal - b.premio.mensal);\n\nfunction formatCpf(digits) {\n  if (!digits || digits.length !== 11) return null;\n  return digits.replace(/(\\d{3})(\\d{3})(\\d{3})(\\d{2})/, '$1.$2.$3-$4');\n}\n\nfunction formatPlaca(raw) {\n  if (!raw || raw.length !== 7) return raw;\n  return raw.slice(0, 3) + '-' + raw.slice(3);\n}\n\nconst now = DateTime.now();\n\nreturn [{\n  json: {\n    data: {\n      consentId,\n      quoteStatus: 'ACKNOWLEDGED',\n      requestDateTime: now.toISO(),\n      validadeDias: 30,\n      veiculo: {\n        ...normalized.veiculo,\n        placa: formatPlaca(normalized.veiculo.placa),\n        valorFipeSimulado: fipe\n      },\n      condutor: {\n        ...normalized.condutor,\n        cpf: formatCpf(normalized.condutor.cpf),\n        idade,\n        anosCnh\n      },\n      localizacao: normalized.localizacao,\n      cobertura: normalized.cobertura,\n      planos\n    },\n    meta: {\n      totalPlanos: planos.length,\n      apiVersion: 'opin-style-auto-v1',\n      deterministicHash: hashHex.slice(0, 16),\n      requestDateTime: now.toISO(),\n      disclaimer: 'Resposta simulada. Auto é regulado pela SUSEP; as taxas e preços aqui são didáticos. Em produção, usar API da seguradora parceira.'\n    }\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        812
+      ],
+      "id": "7d9379de-4c2a-407e-bc68-774a7d5bb988",
+      "name": "Gerar Cotação (Auto)"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 201,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "X-Api-Version",
+                "value": "opin-style-health-v1"
+              },
+              {
+                "name": "X-Fapi-Interaction-Id",
+                "value": "={{ $json.meta.deterministicHash }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        944,
+        812
+      ],
+      "id": "e33e3622-c2d5-40ae-83bd-1047f5ac5888",
+      "name": "Responder Cotação 201 (Auto)"
+    },
+    {
+      "parameters": {
+        "httpMethod": "PATCH",
+        "path": "quote-auto/accept",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        256,
+        1148
+      ],
+      "id": "bf19cdb6-47d3-4c1d-9281-17318462ad2e",
+      "name": "PATCH /quote-auto/accept"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Passo 1 (Auto) — Valida consentId recalculando o hash do originalQuoteRequest.\n *\n * Mock stateless: cliente reenvia `originalQuoteRequest` (mesmo payload do POST\n * /quote-auto/request) junto com `selectedPlan`, `paymentConfirmation` e\n * `acceptance: true`. A normalização tem que ser idêntica à do request.\n */\n\nconst incoming = $input.first().json;\nconst body = incoming.body ?? incoming;\nconst headers = incoming.headers ?? {};\nconst payload = body.data ?? body;\n\nconst consentIdFromPath = payload.consentId;\nif (!consentIdFromPath) {\n  return [{ json: { __error: 'MISSING_CONSENT_ID', detail: 'payload.data.consentId é obrigatório.' } }];\n}\n\nconst originalQuoteRequest = payload.originalQuoteRequest;\nconst selectedPlan = payload.selectedPlan;\nconst paymentConfirmation = payload.paymentConfirmation;\nconst acceptance = payload.acceptance;\n\nif (!originalQuoteRequest) {\n  return [{ json: { __error: 'MISSING_ORIGINAL_REQUEST', detail: 'payload.originalQuoteRequest é obrigatório (stateless validation).' } }];\n}\nif (!selectedPlan?.planId && !selectedPlan?.operadora?.codigo) {\n  return [{ json: { __error: 'MISSING_SELECTED_PLAN', detail: 'payload.selectedPlan deve conter planId ou operadora.codigo.' } }];\n}\nif (acceptance !== true) {\n  return [{ json: { __error: 'ACCEPTANCE_REQUIRED', detail: 'payload.acceptance deve ser true para emitir a apólice.' } }];\n}\nif (!paymentConfirmation?.transactionId) {\n  return [{ json: { __error: 'PAYMENT_REQUIRED', detail: 'payload.paymentConfirmation.transactionId é obrigatório.' } }];\n}\n\nfunction onlyDigits(s) { return String(s ?? '').replace(/\\D/g, ''); }\nfunction normalizeDate(s) { return s ? String(s).slice(0, 10) : null; }\nfunction toNum(v) { const n = Number(v); return Number.isFinite(n) ? n : 0; }\n\nconst veiculo = originalQuoteRequest.veiculo ?? {};\nconst condutor = originalQuoteRequest.condutor ?? {};\nconst localizacao = originalQuoteRequest.localizacao ?? {};\nconst cobertura = originalQuoteRequest.cobertura ?? {};\n\nconst sexoNorm = String(condutor.sexo ?? 'm').toLowerCase().charAt(0);\nconst tipoCoberturaNorm = String(cobertura.tipo ?? 'compreensiva').toLowerCase();\n\nconst normalized = {\n  veiculo: {\n    placa: String(veiculo.placa ?? '').toUpperCase().replace(/[^A-Z0-9]/g, ''),\n    chassi: String(veiculo.chassi ?? '').toUpperCase().replace(/[^A-Z0-9]/g, ''),\n    marca: String(veiculo.marca ?? '').toLowerCase(),\n    modelo: String(veiculo.modelo ?? '').toLowerCase(),\n    anoModelo: toNum(veiculo.anoModelo),\n    combustivel: String(veiculo.combustivel ?? 'flex').toLowerCase(),\n    categoria: String(veiculo.categoria ?? 'passeio').toLowerCase(),\n  },\n  condutor: {\n    cpf: onlyDigits(condutor.cpf),\n    dataNascimento: normalizeDate(condutor.dataNascimento),\n    sexo: sexoNorm,\n    cnhDesde: normalizeDate(condutor.cnhDesde),\n    estadoCivil: String(condutor.estadoCivil ?? 'solteiro').toLowerCase(),\n    usoPrincipal: String(condutor.usoPrincipal ?? 'particular').toLowerCase(),\n  },\n  localizacao: {\n    cep: onlyDigits(localizacao.cep),\n    cidade: String(localizacao.cidade ?? '').toLowerCase(),\n    usoComercial: Boolean(localizacao.usoComercial ?? false),\n    garagem: Boolean(localizacao.garagem ?? true),\n  },\n  cobertura: {\n    tipo: tipoCoberturaNorm,\n    franquiaPerfil: String(cobertura.franquiaPerfil ?? 'normal').toLowerCase(),\n    appCapital: toNum(cobertura.appCapital),\n    rcfMateriais: toNum(cobertura.rcfMateriais),\n    rcfCorporais: toNum(cobertura.rcfCorporais),\n  },\n  idempotencyKey: headers['x-idempotency-key'] ?? null\n};\n\nfunction cyrb128(str) {\n  let h1 = 1779033703, h2 = 3144134277, h3 = 1013904242, h4 = 2773480762;\n  for (let i = 0, k; i < str.length; i++) {\n    k = str.charCodeAt(i);\n    h1 = h2 ^ Math.imul(h1 ^ k, 597399067);\n    h2 = h3 ^ Math.imul(h2 ^ k, 2869860233);\n    h3 = h4 ^ Math.imul(h3 ^ k, 951274213);\n    h4 = h1 ^ Math.imul(h4 ^ k, 2716044179);\n  }\n  h1 = Math.imul(h3 ^ (h1 >>> 18), 597399067);\n  h2 = Math.imul(h4 ^ (h2 >>> 22), 2869860233);\n  h3 = Math.imul(h1 ^ (h3 >>> 17), 951274213);\n  h4 = Math.imul(h2 ^ (h4 >>> 19), 2716044179);\n  h1 ^= (h2 ^ h3 ^ h4); h2 ^= h1; h3 ^= h1; h4 ^= h1;\n  return [h1 >>> 0, h2 >>> 0, h3 >>> 0, h4 >>> 0];\n}\n\nconst hashParts = cyrb128(JSON.stringify(normalized));\nconst hashHex = hashParts.map(n => n.toString(16).padStart(8, '0')).join('');\nconst expectedConsentId = [\n  'urn:opin-mock:auto:consent:',\n  hashHex.slice(0, 8), '-',\n  hashHex.slice(8, 12), '-',\n  hashHex.slice(12, 16), '-',\n  hashHex.slice(16, 20), '-',\n  hashHex.slice(20, 32)\n].join('');\n\nconst consentMatches = expectedConsentId === consentIdFromPath;\n\nreturn [{\n  json: {\n    consentMatches,\n    consentIdFromPath,\n    expectedConsentId,\n    normalized,\n    hashHex,\n    seed: hashParts[0],\n    selectedPlan,\n    paymentConfirmation,\n    __error: null\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        1148
+      ],
+      "id": "e7187cf8-5a07-4e5a-b121-25e0722644de",
+      "name": "Validar consentId e Hash (Auto)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-consent-match",
+              "leftValue": "={{ $json.__error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "empty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "cond-consent-match-2",
+              "leftValue": "={{ $json.consentMatches }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        640,
+        1148
+      ],
+      "id": "02d77180-1837-4f14-9a6b-1fe659d30d08",
+      "name": "Validação passou? (Auto)"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Passo 2 (Auto, sucesso) — Emite apólice de AUTO determinística.\n *\n * Recomputa planos com o MESMO PRNG do fluxo de cotação para que o prêmio\n * emitido bata com o mostrado na cotação. policyNumber derivado do hash +\n * operadora. Vigência padrão: 12 meses renováveis.\n */\n\nconst { normalized, hashHex, seed, selectedPlan, paymentConfirmation, consentIdFromPath } = $input.first().json;\n\nlet s = seed;\nconst rand = () => {\n  s = (s + 0x6D2B79F5) | 0;\n  let t = s;\n  t = Math.imul(t ^ (t >>> 15), t | 1);\n  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);\n  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;\n};\nconst randRange = (min, max) => min + rand() * (max - min);\n\nfunction idadeAnos(dn) {\n  if (!dn) return 35;\n  const d = DateTime.fromISO(dn);\n  if (!d.isValid) return 35;\n  return Math.max(0, Math.floor(DateTime.now().diff(d, 'years').years));\n}\nfunction anosHabilitado(dt) {\n  if (!dt) return 5;\n  const d = DateTime.fromISO(dt);\n  if (!d.isValid) return 5;\n  return Math.max(0, Math.floor(DateTime.now().diff(d, 'years').years));\n}\nfunction valorFipeSimulado(anoModelo, categoria) {\n  const anosUso = Math.max(0, DateTime.now().year - anoModelo);\n  const depreciacao = Math.max(0.25, 1 - anosUso * 0.09);\n  const baseCategorias = {\n    'passeio': 80000, 'hatch': 65000, 'sedan': 95000,\n    'suv': 140000, 'pickup': 180000, 'utilitario': 110000,\n  };\n  const base = baseCategorias[categoria] ?? 85000;\n  return Math.round(base * depreciacao);\n}\nfunction riscoCep(cep) {\n  const p = Number(String(cep).slice(0, 2));\n  if (!Number.isFinite(p)) return 1.0;\n  if ([1, 2, 3, 4, 5, 20, 21, 22, 23, 24, 50, 51, 52, 53, 54, 55, 57, 58].includes(p)) return 1.20;\n  if ([13, 40, 41, 60, 69, 70, 80, 90].includes(p)) return 1.05;\n  return 0.95;\n}\n\nconst idade = idadeAnos(normalized.condutor.dataNascimento);\nconst anosCnh = anosHabilitado(normalized.condutor.cnhDesde);\nconst sexo = normalized.condutor.sexo;\nconst anoModelo = normalized.veiculo.anoModelo;\nconst fipe = valorFipeSimulado(anoModelo, normalized.veiculo.categoria);\n\nfunction taxaPorIdade(i) {\n  if (i < 25) return 0.080;\n  if (i < 30) return 0.055;\n  if (i < 40) return 0.038;\n  if (i < 55) return 0.030;\n  if (i < 65) return 0.034;\n  return 0.045;\n}\n\nconst taxaBase = taxaPorIdade(idade);\nconst multSexo = sexo === 'f' ? 0.90 : 1.00;\nconst multExperiencia = anosCnh < 2 ? 1.40 : anosCnh < 5 ? 1.15 : anosCnh < 15 ? 1.00 : 0.93;\nconst multUsoComercial = normalized.localizacao.usoComercial ? 1.25 : 1.00;\nconst multGaragem = normalized.localizacao.garagem ? 0.93 : 1.08;\nconst multCep = riscoCep(normalized.localizacao.cep);\n\nconst multCobertura = {\n  'compreensiva': 1.00, 'rcf': 0.45, 'app': 0.20, 'basica': 0.30,\n}[normalized.cobertura.tipo] ?? 1.00;\n\nconst multFranquia = {\n  'reduzida': 1.18, 'normal': 1.00, 'ampliada': 0.85,\n}[normalized.cobertura.franquiaPerfil] ?? 1.00;\n\nconst adicRcf = (normalized.cobertura.rcfMateriais + normalized.cobertura.rcfCorporais) * 0.0012;\nconst adicApp = normalized.cobertura.appCapital * 0.0020;\n\nfunction premioAnual(multMarca) {\n  const base = fipe * taxaBase * multSexo * multExperiencia *\n               multUsoComercial * multGaragem * multCep *\n               multCobertura * multFranquia;\n  return (base + adicRcf + adicApp) * multMarca;\n}\n\nconst operadoras = [\n  { codigo: 'PRT', nome: 'Porto Seguro',    registroSusep: '0292-0', produto: 'Auto Carro Fácil',                   multMarca: 1.00,\n    franquiaReduzida: 3200, franquiaNormal: 4500, franquiaAmpliada: 6500 },\n  { codigo: 'BRD', nome: 'Bradesco Auto',   registroSusep: '0153-1', produto: 'Bradesco Auto Primeiro Protegido',   multMarca: 1.04,\n    franquiaReduzida: 3000, franquiaNormal: 4300, franquiaAmpliada: 6200 },\n  { codigo: 'SUL', nome: 'SulAmérica Auto', registroSusep: '0477-8', produto: 'SulAmérica Auto Ativo',              multMarca: 0.97,\n    franquiaReduzida: 3400, franquiaNormal: 4700, franquiaAmpliada: 6700 }\n];\n\n// Recompute planos in SAME order as quote flow so PRNG aligns\nconst planosRecomputados = operadoras.map(op => {\n  const ruido = 1 + randRange(-0.03, 0.03);\n  const anual = Math.round(premioAnual(op.multMarca) * ruido * 100) / 100;\n  const mensal = Math.round(anual / 12 * 100) / 100;\n  return {\n    planId: `${op.codigo}-${hashHex.slice(0, 6)}`,\n    operadora: op,\n    premio: { mensal, anual, iof: 0.0738 * anual, moeda: 'BRL' }\n  };\n});\n\nconst planoEscolhido = planosRecomputados.find(p =>\n  (selectedPlan.planId && p.planId === selectedPlan.planId) ||\n  (selectedPlan.operadora?.codigo && p.operadora.codigo === selectedPlan.operadora.codigo)\n);\n\nif (!planoEscolhido) {\n  throw new Error(`Plano selecionado não encontrado na cotação original: ${JSON.stringify(selectedPlan)}`);\n}\n\nconst franquia = {\n  'reduzida': planoEscolhido.operadora.franquiaReduzida,\n  'normal': planoEscolhido.operadora.franquiaNormal,\n  'ampliada': planoEscolhido.operadora.franquiaAmpliada\n}[normalized.cobertura.franquiaPerfil] ?? planoEscolhido.operadora.franquiaNormal;\n\nconst policyNumber = `AT-${planoEscolhido.operadora.codigo}-${hashHex.slice(0, 8).toUpperCase()}`;\nconst policyId = `urn:opin-mock:auto:policy:${hashHex.slice(0, 8)}-${hashHex.slice(8, 12)}-${hashHex.slice(12, 16)}-${hashHex.slice(16, 20)}-${hashHex.slice(20, 32)}`;\n\nconst now = DateTime.now();\nconst startDate = now;\nconst endDate = now.plus({ years: 1 });\n\nconst coberturasEmitidas = [{\n  tipo: normalized.cobertura.tipo,\n  valorFipeSimulado: fipe,\n  franquia,\n}];\nif (normalized.cobertura.rcfMateriais > 0) coberturasEmitidas.push({ tipo: 'rcf_materiais', capital: normalized.cobertura.rcfMateriais });\nif (normalized.cobertura.rcfCorporais > 0) coberturasEmitidas.push({ tipo: 'rcf_corporais', capital: normalized.cobertura.rcfCorporais });\nif (normalized.cobertura.appCapital > 0)   coberturasEmitidas.push({ tipo: 'app_acidentes_pessoais', capital: normalized.cobertura.appCapital });\n\nfunction formatCpf(digits) {\n  if (!digits || digits.length !== 11) return null;\n  return digits.replace(/(\\d{3})(\\d{3})(\\d{3})(\\d{2})/, '$1.$2.$3-$4');\n}\nfunction formatPlaca(raw) {\n  if (!raw || raw.length !== 7) return raw;\n  return raw.slice(0, 3) + '-' + raw.slice(3);\n}\n\nreturn [{\n  json: {\n    data: {\n      policyId,\n      policyNumber,\n      consentId: consentIdFromPath,\n      issueDateTime: now.toISO(),\n      startDate: startDate.toISODate(),\n      endDate: endDate.toISODate(),\n      status: 'ACTIVE',\n      veiculo: {\n        ...normalized.veiculo,\n        placa: formatPlaca(normalized.veiculo.placa),\n        valorFipeSimulado: fipe\n      },\n      condutor: {\n        ...normalized.condutor,\n        cpf: formatCpf(normalized.condutor.cpf),\n        idade,\n        anosCnh\n      },\n      localizacao: normalized.localizacao,\n      coberturas: coberturasEmitidas,\n      selectedPlan: {\n        planId: planoEscolhido.planId,\n        operadora: {\n          codigo: planoEscolhido.operadora.codigo,\n          nome: planoEscolhido.operadora.nome,\n          registroSusep: planoEscolhido.operadora.registroSusep\n        },\n        produto: {\n          nome: `${planoEscolhido.operadora.nome} ${planoEscolhido.operadora.produto}`,\n          vigencia: '12 meses renovável'\n        }\n      },\n      premium: {\n        mensal: planoEscolhido.premio.mensal,\n        anual: planoEscolhido.premio.anual,\n        iof: planoEscolhido.premio.iof,\n        moeda: 'BRL'\n      },\n      payment: {\n        method: paymentConfirmation.method ?? null,\n        transactionId: paymentConfirmation.transactionId\n      },\n      documents: {\n        policyPdfUrl: `https://mock.opin-style/auto/policies/${hashHex.slice(0, 32)}.pdf`,\n        resumoContratualUrl: `https://mock.opin-style/auto/docs/resumo-${hashHex.slice(0, 16)}.pdf`\n      }\n    },\n    meta: {\n      apiVersion: 'opin-style-auto-v1',\n      requestDateTime: now.toISO(),\n      disclaimer: 'Apólice simulada. Auto é regulado pela SUSEP, não pelo OPIN.'\n    }\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        1052
+      ],
+      "id": "1eb9c474-68f0-46b0-8edb-900ca7a554b8",
+      "name": "Emitir Apólice (Auto)"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 201,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "X-Api-Version",
+                "value": "opin-style-health-v1"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1088,
+        1052
+      ],
+      "id": "486b2415-6f9e-493b-b4eb-b2b8b11e7351",
+      "name": "Responder Emissão 201 (Auto)"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Passo 2 (erro) — Monta ResponseError OPIN-style.\n */\n\nconst input = $input.first().json;\nconst now = DateTime.now();\n\nconst errorMap = {\n  MISSING_CONSENT_ID:      { title: 'consentId ausente', httpCode: 400 },\n  MISSING_ORIGINAL_REQUEST: { title: 'originalQuoteRequest obrigatório', httpCode: 400 },\n  MISSING_SELECTED_PLAN:   { title: 'selectedPlan obrigatório', httpCode: 400 },\n  ACCEPTANCE_REQUIRED:     { title: 'acceptance precisa ser true', httpCode: 400 },\n  PAYMENT_REQUIRED:        { title: 'paymentConfirmation obrigatório', httpCode: 400 },\n  CONSENT_MISMATCH:        { title: 'consentId não confere com originalQuoteRequest', httpCode: 422 }\n};\n\nconst code = input.__error ?? 'CONSENT_MISMATCH';\nconst detail = input.detail ?? (\n  code === 'CONSENT_MISMATCH'\n    ? `O hash recomputado do originalQuoteRequest não bate com o consentId informado (${input.consentIdFromPath}).`\n    : 'Erro de validação.'\n);\nconst meta = errorMap[code] ?? errorMap.CONSENT_MISMATCH;\n\nreturn [{\n  json: {\n    errors: [{ code, title: meta.title, detail }],\n    meta: {\n      apiVersion: 'opin-style-life-v1',\n      requestDateTime: now.toISO(),\n      httpCode: meta.httpCode\n    }\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        864,
+        1244
+      ],
+      "id": "ddc262b8-6350-463c-a7b5-e544eaa26eba",
+      "name": "Montar ResponseError (Auto)"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": "={{ $json.meta.httpCode }}",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "X-Api-Version",
+                "value": "opin-style-health-v1"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1088,
+        1244
+      ],
+      "id": "4dc60094-ead9-405f-b50c-5ff8a11e061f",
+      "name": "Responder Erro 4xx (Auto)"
+    }
+  ],
+  "connections": {
+    "POST /quote-life/request": {
+      "main": [
+        [
+          {
+            "node": "Normalizar e Hash (Cotar)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar e Hash (Cotar)": {
+      "main": [
+        [
+          {
+            "node": "Gerar Cotação",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar Cotação": {
+      "main": [
+        [
+          {
+            "node": "Responder Cotação (201)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PATCH /quote-life/accept": {
+      "main": [
+        [
+          {
+            "node": "Validar consentId e Hash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar consentId e Hash": {
+      "main": [
+        [
+          {
+            "node": "Validação passou?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validação passou?": {
+      "main": [
+        [
+          {
+            "node": "Emitir Apólice",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Montar ResponseError",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Emitir Apólice": {
+      "main": [
+        [
+          {
+            "node": "Responder Emissão (201)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar ResponseError": {
+      "main": [
+        [
+          {
+            "node": "Responder Erro (4xx)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST /quote-auto/request": {
+      "main": [
+        [
+          {
+            "node": "Normalizar e Hash (Cotar Auto)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar e Hash (Cotar Auto)": {
+      "main": [
+        [
+          {
+            "node": "Gerar Cotação (Auto)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar Cotação (Auto)": {
+      "main": [
+        [
+          {
+            "node": "Responder Cotação 201 (Auto)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PATCH /quote-auto/accept": {
+      "main": [
+        [
+          {
+            "node": "Validar consentId e Hash (Auto)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar consentId e Hash (Auto)": {
+      "main": [
+        [
+          {
+            "node": "Validação passou? (Auto)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validação passou? (Auto)": {
+      "main": [
+        [
+          {
+            "node": "Emitir Apólice (Auto)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Montar ResponseError (Auto)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Emitir Apólice (Auto)": {
+      "main": [
+        [
+          {
+            "node": "Responder Emissão 201 (Auto)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar ResponseError (Auto)": {
+      "main": [
+        [
+          {
+            "node": "Responder Erro 4xx (Auto)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {},
+  "active": false
+}

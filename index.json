@@ -1,0 +1,22 @@
+{
+  "schema_version": "1",
+  "updated_at": "2026-04-23T02:15:52Z",
+  "packs": [
+    {
+      "slug": "corretora-seguros",
+      "name": "Corretora de Seguros",
+      "description": "Atendente de corretora no WhatsApp: tira dúvidas de seguros de vida e auto, faz cotação, envia proposta, acompanha apólices e abre sinistros. Cuida do follow-up sozinho e passa os leads quentes para o corretor humano.",
+      "latest_version": null,
+      "language": "pt-BR",
+      "min_plugin_version": "1.0.0",
+      "tags": [
+        "seguros",
+        "vendas",
+        "atendimento",
+        "voz"
+      ],
+      "path": "packs/corretora-seguros",
+      "tarball_url_template": "https://github.com/fazer-ai/n8n-workflows/archive/refs/tags/{slug}-v{version}.tar.gz"
+    }
+  ]
+}

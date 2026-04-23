@@ -1,0 +1,169 @@
+{
+  "name": "04. Buscar Apólices",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "account_id",
+              "type": "number"
+            },
+            {
+              "name": "task_id",
+              "type": "number"
+            },
+            {
+              "name": "board_id",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        352,
+        112
+      ],
+      "id": "13653d6a-c661-4cc3-a103-98fff40c9d8d",
+      "name": "Gatilho"
+    },
+    {
+      "parameters": {
+        "resource": "kanbanTask",
+        "operation": "get",
+        "accountId": {
+          "__rl": true,
+          "value": "={{ $json.account_id }}",
+          "mode": "id"
+        },
+        "kanbanBoardId": {
+          "__rl": true,
+          "value": "={{ $json.board_id }}",
+          "mode": "id"
+        },
+        "kanbanTaskId": {
+          "__rl": true,
+          "value": "={{ $json.task_id }}",
+          "mode": "id"
+        }
+      },
+      "type": "@fazer-ai/n8n-nodes-chatwoot.chatwoot",
+      "typeVersion": 1,
+      "position": [
+        544,
+        112
+      ],
+      "id": "f4fc9ef7-059c-489e-aebf-6ac39d6b4200",
+      "name": "Buscar tarefa",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Formata dados da apólice salvos como atributos da tarefa.\n * Suporta apólices de vida (capital, beneficiários) e será extensível\n * para outros ramos conforme a corretora for adicionando.\n */\nconst task = $input.first().json;\nconst attrs = task.custom_attributes ?? {};\n\nconst temApolice = Boolean(attrs.numero_apolice);\n\nif (!temApolice) {\n  return [{\n    json: {\n      encontrada: false,\n      resumo_cliente: 'Não encontrei uma apólice ativa vinculada a essa conversa. Talvez ainda não tenha sido emitida?'\n    }\n  }];\n}\n\nfunction brl(v) {\n  const n = Number(v);\n  return Number.isFinite(n) ? n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—';\n}\n\nconst hoje = DateTime.now();\nconst renovacao = attrs.data_renovacao ? DateTime.fromISO(String(attrs.data_renovacao)) : null;\nconst diasParaRenovacao = renovacao?.isValid\n  ? Math.ceil(renovacao.diff(hoje, 'days').days)\n  : null;\n\nconst status = diasParaRenovacao !== null && diasParaRenovacao < 0\n  ? 'vencida'\n  : 'ativa';\n\nconst linhas = [\n  '📄 *Sua apólice*',\n  '',\n  `*Número:* ${attrs.numero_apolice}`,\n  `*Operadora:* ${attrs.operadora ?? '—'}`,\n  `*Plano:* ${attrs.plano_escolhido ?? '—'}`,\n  `*Vigência:* ${attrs.data_vigencia ?? '—'} até ${attrs.data_renovacao ?? '—'}`,\n  `*Status:* ${status}${diasParaRenovacao !== null ? ` (renova em ${diasParaRenovacao} dias)` : ''}`\n];\n\nif (attrs.capital_morte) linhas.push(`*Capital de morte:* ${brl(attrs.capital_morte)}`);\nif (attrs.premio_mensal) linhas.push(`*Mensalidade:* ${brl(attrs.premio_mensal)}`);\nif (attrs.beneficiarios_resumo) linhas.push(`*Beneficiários:* ${attrs.beneficiarios_resumo}`);\n\nconst resumoCliente = linhas.join('\\n');\n\nreturn [{\n  json: {\n    encontrada: true,\n    status,\n    ramo: attrs.ramo ?? 'vida',\n    numero_apolice: attrs.numero_apolice,\n    operadora: attrs.operadora,\n    plano_escolhido: attrs.plano_escolhido,\n    data_vigencia: attrs.data_vigencia,\n    data_renovacao: attrs.data_renovacao,\n    dias_para_renovacao: diasParaRenovacao,\n    capital_morte: attrs.capital_morte,\n    premio_mensal: attrs.premio_mensal,\n    beneficiarios_resumo: attrs.beneficiarios_resumo,\n    resumo_cliente: resumoCliente,\n    task_step: task.board_step?.name ?? null\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        112
+      ],
+      "id": "07a89e14-48c6-4853-95e9-c6f998a95786",
+      "name": "Formatar apólice"
+    },
+    {
+      "parameters": {
+        "content": "## 04. Buscar Apólices\n\nLê os atributos da tarefa do Kanban (numero_apolice, operadora, plano_escolhido, data_vigencia, data_renovacao) e devolve um resumo pronto para o agente enviar ao cliente.\n\n**Entradas:**\n- `account_id`, `task_id`\n\n**Observação:** na Moreira Seguros, a fonte da verdade sobre apólices ativas é o próprio Kanban (cada apólice = uma tarefa com atributos preenchidos).",
+        "height": 280,
+        "width": 550,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        16
+      ],
+      "id": "58d9918d-ea5b-4a69-a75f-be85f0f09111",
+      "name": "Note principal"
+    },
+    {
+      "parameters": {
+        "content": "[![fazer.ai](https://framerusercontent.com/images/HqY9djLTzyutSKnuLLqBr92KbM.png?scale-down-to=256)](https://fazer.ai?utm_source=n8n&utm_campaign=sec-v3)\n\n## Esse é um template faça você mesmo do canal\n## Lucas Moreira\n\n### Inscreva-se no nosso canal no YouTube\n[![YouTube Lucas Moreira](https://img.shields.io/youtube/channel/subscribers/UCtmp6SxzLscu0GRTbgM8FTw?style=flat-square&logo=youtube&label=Inscreva-se&color=f00)](https://youtube.com/@eulucassmoreira?si=0lH7hwX9pukjhmPQ)\n[![Instagram](https://img.shields.io/badge/instagram-black?logo=instagram&style=for-the-badge)](https://instagram.com/eulucassmoreira)\n[![GitHub fazer.ai](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white&label)](https://github.com/fazer-ai)\n",
+        "height": 472,
+        "width": 550,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        -464
+      ],
+      "id": "6ae5c9f6-f931-4e4f-96e6-f87718351e99",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "## Quer entender como funciona?\n\n\n### Assista o vídeo, deixe um like, e se inscreva no canal para ter acesso a mais workflows como esse!\n\n[![Vídeo YouTube Kanban Clínicas](https://i1.ytimg.com/vi_webp/vYtaGw3vRII/maxresdefault.webp)](https://www.youtube.com/watch?v=vYtaGw3vRII)",
+        "height": 472,
+        "width": 596,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        144,
+        -464
+      ],
+      "id": "bdcc3a3b-5e9c-4f79-afa9-b0cb60b8ae85",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "## [Clique aqui e entre agora para tirar suas dúvidas](https://lucasmoreira.ai)\n[![Banner comunidade](https://assets-v2.circle.so/voccie8o44ecsfpx7p8z1j9rze82)](https://lucasmoreira.ai)",
+        "height": 472,
+        "width": 1124,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        752,
+        -464
+      ],
+      "id": "4c848f66-3ba0-4214-ac11-fed5424d01c1",
+      "name": "Sticky Note36"
+    }
+  ],
+  "connections": {
+    "Gatilho": {
+      "main": [
+        [
+          {
+            "node": "Buscar tarefa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar tarefa": {
+      "main": [
+        [
+          {
+            "node": "Formatar apólice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "active": false
+}

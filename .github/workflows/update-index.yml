@@ -1,0 +1,40 @@
+name: Update index.json
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packs/**'
+      - 'scripts/build_index.mjs'
+      - '.github/workflows/update-index.yml'
+    tags:
+      - '*-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history for tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Regenerate index.json
+        run: node scripts/build_index.mjs
+
+      - name: Commit index.json if changed
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: regenerate index.json'
+          file_pattern: 'index.json'
+          branch: main

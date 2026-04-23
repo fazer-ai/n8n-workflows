@@ -1,0 +1,48 @@
+{
+  "schema_version": "1",
+  "slug": "corretora-seguros",
+  "name": "Corretora de Seguros",
+  "version": "0.1.0",
+  "description": "Atendente de corretora no WhatsApp: tira dúvidas de seguros de vida e auto, faz cotação, envia proposta, acompanha apólices e abre sinistros. Cuida do follow-up sozinho e passa os leads quentes para o corretor humano.",
+  "language": "pt-BR",
+  "min_plugin_version": "1.0.0",
+  "tags": ["seguros", "vendas", "atendimento", "voz"],
+
+  "workflows": {
+    "dir": "workflows",
+    "entrypoints": [
+      "00. Configurações IA Corretora.json"
+    ]
+  },
+
+  "required_community_nodes": [
+    { "pkg": "@fazer-ai/n8n-nodes-chatwoot", "min_version": "2.3.0" },
+    { "pkg": "@elevenlabs/n8n-nodes-elevenlabs", "min_version": "0.2.4" }
+  ],
+
+  "required_credentials": [
+    { "type": "openAiApi", "optional": false },
+    { "type": "fazerAiChatwootApi", "optional": false },
+    { "type": "postgres", "optional": false, "purpose": "workflow-state" },
+    { "type": "elevenLabsApi", "optional": true, "enables_feature": "Respostas em áudio" },
+    { "type": "httpHeaderAuth", "optional": true, "enables_feature": "Propostas em PDF", "phase_9_hint": "PDFShift" }
+  ],
+
+  "cred_by_type_hint": {
+    "@fazer-ai/n8n-nodes-chatwoot.chatwoot": "fazerAiChatwootApi",
+    "@fazer-ai/n8n-nodes-chatwoot.chatwootTool": "fazerAiChatwootApi",
+    "@fazer-ai/n8n-nodes-chatwoot.chatwootTrigger": "fazerAiChatwootApi",
+    "@elevenlabs/n8n-nodes-elevenlabs.elevenLabs": "elevenLabsApi",
+    "@n8n/n8n-nodes-langchain.lmChatOpenAi": "openAiApi",
+    "n8n-nodes-base.openAi": "openAiApi",
+    "n8n-nodes-base.postgres": "postgres"
+  },
+
+  "info_node_defaults": {
+    "alerta_conversation_id": null,
+    "alerta_inbox_id": null
+  },
+
+  "postinstall_notes": "Depois da instalação, abra o workflow '00. Configurações IA Corretora' no n8n para ajustar o nome do corretor, horário de atendimento, mensagens e regras específicas da sua corretora. O pack assume uma caixa de WhatsApp; se você atende por várias, fale com o suporte.",
+  "docs_url": "https://github.com/fazer-ai/n8n-workflows/tree/main/packs/corretora-seguros#readme"
+}
