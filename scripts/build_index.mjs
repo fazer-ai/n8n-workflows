@@ -141,9 +141,27 @@ function main() {
     const latest = latestVersionForSlug(slug, tags);
     packs.push(buildIndexEntry(manifest, latest));
   }
+
+  // Preserve updated_at when nothing semantic changed. Otherwise the Actions
+  // job pushes timestamp-only commits that race between parallel runs (e.g.
+  // commit push + tag push firing together) and fill history with empty diffs.
+  let previousUpdatedAt = null;
+  try {
+    const previous = JSON.parse(readFileSync(INDEX_PATH, "utf8"));
+    if (
+      previous.schema_version === SCHEMA_VERSION &&
+      JSON.stringify(previous.packs) === JSON.stringify(packs)
+    ) {
+      previousUpdatedAt = previous.updated_at;
+    }
+  } catch (err) {
+    if (err.code !== "ENOENT") throw err;
+  }
+
   const index = {
     schema_version: SCHEMA_VERSION,
-    updated_at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+    updated_at:
+      previousUpdatedAt ?? new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
     packs,
   };
   writeFileSync(INDEX_PATH, JSON.stringify(index, null, 2) + "\n", "utf8");
