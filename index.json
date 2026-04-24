@@ -1,12 +1,12 @@
 {
   "schema_version": "1",
-  "updated_at": "2026-04-24T16:08:37Z",
+  "updated_at": "2026-04-24T16:13:24Z",
   "packs": [
     {
       "slug": "corretora-seguros",
       "name": "Corretora de Seguros",
       "description": "Atendente de corretora no WhatsApp: tira dúvidas de seguros de vida e auto, faz cotação, envia proposta, acompanha apólices e abre sinistros. Cuida do follow-up sozinho e passa os leads quentes para o corretor humano.",
-      "latest_version": "1.0.0",
+      "latest_version": "1.0.1",
       "language": "pt-BR",
       "min_plugin_version": "1.0.0",
       "tags": [
