@@ -39,4 +39,4 @@ O canal onde o agente avisa sobre pendências (lead quente, erro, caso que preci
 
 ## Como instalar
 
-Esse pack é distribuído pelo plugin [`fazer-ai-atendimento`](https://github.com/fazer-ai/fazer-ai-atendimento). Rode `/fazer-ai-atendimento` no Claude Code, escolha "catálogo fazer.ai" na primeira pergunta e selecione **Corretora de Seguros** no menu. O plugin cuida do resto: baixa os workflows, configura as credenciais e deixa tudo rodando na sua VPS.
+Esse pack é distribuído pelo plugin [`fazer-ai-atendimento`](https://app.fazer.ai/#/claude-skills). Rode `/fazer-ai-atendimento` no Claude Code, escolha "catálogo fazer.ai" na primeira pergunta e selecione **Corretora de Seguros** no menu. O plugin cuida do resto: baixa os workflows, configura as credenciais e deixa tudo rodando na sua VPS.

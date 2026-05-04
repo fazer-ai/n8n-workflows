@@ -2,7 +2,7 @@
 
 Catálogo de packs de workflows n8n da fazer.ai. Cada pack é um conjunto de workflows prontos pra resolver uma necessidade concreta: atendente de IA num vertical (corretora de seguros, clínica odontológica, financeira de cobrança, etc.), automação de processo interno, integração entre ferramentas, o que couber.
 
-Os workflows são a "receita" do pack: nodes, conexões, prompts, integrações, tudo escrito em n8n. Quem faz o download, configura credenciais e ativa é o consumidor do catálogo. Hoje o consumidor principal é o plugin [`fazer-ai-atendimento`](https://github.com/fazer-ai/fazer-ai-atendimento) pra packs de atendimento no WhatsApp, mas qualquer ferramenta pode ler o `index.json` e baixar os tarballs.
+Os workflows são a "receita" do pack: nodes, conexões, prompts, integrações, tudo escrito em n8n. Quem faz o download, configura credenciais e ativa é o consumidor do catálogo. Hoje o consumidor principal é o plugin [`fazer-ai-atendimento`](https://app.fazer.ai/#/claude-skills) pra packs de atendimento no WhatsApp, mas qualquer ferramenta pode ler o `index.json` e baixar os tarballs.
 
 ## O que tem aqui
 
